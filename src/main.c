@@ -2,6 +2,46 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
+// Vertex shader source code
+const char *vertexShaderSource =
+    "#version 460 core\n"
+    "layout (location = 0) in vec3 aPos;\n"
+    "out vec3 vertexColor;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(aPos, 1.0);\n"
+    "   vertexColor = aPos; // Pass position to the fragment shader\n"
+    "}\0";
+
+// Fragment shader source code
+const char *fragmentShaderSource =
+    "#version 460 core\n"
+    "in vec3 vertexColor;\n"
+    "out vec4 FragColor;\n"
+    "void main()\n"
+    "{\n"
+    "   // Map the position to a color\n"
+    "   FragColor = vec4(vertexColor * 0.5 + 0.5, 1.0);\n" // Color based on
+                                                           // position
+    "}\n\0";
+
+// Function to compile shaders and check for errors
+unsigned int compileShader(unsigned int type, const char *source) {
+  unsigned int shader = glCreateShader(type);
+  glShaderSource(shader, 1, &source, NULL);
+  glCompileShader(shader);
+
+  // Check for shader compile errors
+  int success;
+  char infoLog[512];
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    glGetShaderInfoLog(shader, 512, NULL, infoLog);
+    printf("ERROR::SHADER::COMPILATION_FAILED\n%s\n", infoLog);
+  }
+  return shader;
+}
+
 // Function to handle key events
 void key_callback(GLFWwindow *window, int key, int scancode, int action,
                   int mods) {
@@ -45,6 +85,32 @@ int main(void) {
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
+  // Build and compile our shader program
+  unsigned int vertexShader =
+      compileShader(GL_VERTEX_SHADER, vertexShaderSource);
+  unsigned int fragmentShader =
+      compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+
+  // Link shaders into a program
+  unsigned int shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+  glLinkProgram(shaderProgram);
+
+  // Check for linking errors
+  int success;
+  char infoLog[512];
+  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+  if (!success) {
+    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+    printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
+  }
+
+  // Clean up shaders as they are now linked into our program and no longer
+  // necessary
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+
   // Define the vertices for a triangle
   float vertices[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
 
@@ -72,6 +138,9 @@ int main(void) {
     // Clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
 
+    // Use our shader program
+    glUseProgram(shaderProgram);
+
     // Draw the triangle
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -87,6 +156,7 @@ int main(void) {
   // Clean up
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
+  glDeleteProgram(shaderProgram);
 
   glfwDestroyWindow(window);
   glfwTerminate();
