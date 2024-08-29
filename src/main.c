@@ -6,6 +6,18 @@
 #include <string.h>
 #include <time.h>
 
+void glClearError() {
+  while (glGetError() != GL_NO_ERROR) {
+  }
+}
+
+void glCheckError() {
+  GLenum error;
+  while ((error = glGetError())) {
+    printf("[OpenGL Error] (%u)\n", error);
+  }
+}
+
 typedef struct {
   char *vertexShaderSource;
   char *fragmentShaderSource;
@@ -195,20 +207,27 @@ int main(void) {
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  // Create and bind a Index Buffer Object
-  unsigned int IBO;
-  glGenBuffers(1, &IBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
   // Set the vertex attributes pointers
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  // Unbind the VBO and VAO and IBO
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  // Create and bind a Index Buffer Object
+  unsigned int IBO;
+  glGenBuffers(1, &IBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+               GL_STATIC_DRAW);
+
+
+  int location = glGetUniformLocation(shaderProgram, "u_Color");
+
+  // Unbind the VBO and VAO
   glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  float r = 0.0f;
+  float r_inc = 0.002f;
 
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
@@ -218,10 +237,19 @@ int main(void) {
     // Use our shader program
     glUseProgram(shaderProgram);
 
+    r += r_inc;
+    if (r > 1) {
+      r = 0.0f;
+    }
+    glUniform4f(location, r, 0.3f, 0.8f, 1.0f);
+
     // Draw the triangle
     glBindVertexArray(VAO);
     // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    // glClearError();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+    // glCheckError();
+
     glBindVertexArray(0);
 
     // Swap front and back buffers

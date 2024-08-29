@@ -12,8 +12,12 @@ void main()
 #version 460 core
 in vec3 vertexColor;
 out vec4 FragColor;
+
+uniform vec4 u_Color;
+
 void main()
 {
    // Map the position to a color
-   FragColor = vec4(vertexColor * 0.5 + 0.5, 1.0); // Color based on position
+   // FragColor = vec4(vertexColor * 0.5 + 0.5, 1.0); // Color based on position
+   FragColor = u_Color;
 };
