@@ -33,13 +33,45 @@ unsigned int compileShader(unsigned int type, const char *source) {
 
   // Check for shader compile errors
   int success;
-  char infoLog[512];
   glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
   if (!success) {
+    char infoLog[512];
     glGetShaderInfoLog(shader, 512, NULL, infoLog);
     printf("ERROR::SHADER::COMPILATION_FAILED\n%s\n", infoLog);
   }
   return shader;
+}
+
+unsigned int createShader(const char *vertexShaderSource,
+                          const char *fragmentShaderSource) {
+
+  // Build and compile our shader program
+  unsigned int vertexShader =
+      compileShader(GL_VERTEX_SHADER, vertexShaderSource);
+  unsigned int fragmentShader =
+      compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+
+  // Link shaders into a program
+  unsigned int shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+  glLinkProgram(shaderProgram);
+
+  // Check for linking errors
+  int success;
+  char infoLog[512];
+  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+  if (!success) {
+    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+    printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
+  }
+
+  // Clean up shaders as they are now linked into our program and no longer
+  // necessary
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+
+  return shaderProgram;
 }
 
 // Function to handle key events
@@ -79,37 +111,20 @@ int main(void) {
     return -1;
   }
 
+  const GLubyte *renderer = glGetString(GL_RENDERER); // get the GPU renderer
+  const GLubyte *version = glGetString(GL_VERSION);   // get the OpenGL version
+
+  printf("Renderer: %s\n", renderer);
+  printf("OpenGL version supported %s\n", version);
+
   // Set a clear color to distinguish the triangle
   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
-  // Build and compile our shader program
-  unsigned int vertexShader =
-      compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-  unsigned int fragmentShader =
-      compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
-
-  // Link shaders into a program
-  unsigned int shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
-
-  // Check for linking errors
-  int success;
-  char infoLog[512];
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-    printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
-  }
-
-  // Clean up shaders as they are now linked into our program and no longer
-  // necessary
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  unsigned int shaderProgram =
+      createShader(vertexShaderSource, fragmentShaderSource);
 
   // Define the vertices for a triangle
   float vertices[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
