@@ -2,28 +2,72 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
-// Vertex shader source code
-const char *vertexShaderSource =
-    "#version 460 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "out vec3 vertexColor;\n"
-    "void main()\n"
-    "{\n"
-    "   gl_Position = vec4(aPos, 1.0);\n"
-    "   vertexColor = aPos; // Pass position to the fragment shader\n"
-    "}\0";
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-// Fragment shader source code
-const char *fragmentShaderSource =
-    "#version 460 core\n"
-    "in vec3 vertexColor;\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   // Map the position to a color\n"
-    "   FragColor = vec4(vertexColor * 0.5 + 0.5, 1.0);\n" // Color based on
-                                                           // position
-    "}\n\0";
+typedef struct {
+  char *vertexShaderSource;
+  char *fragmentShaderSource;
+} ShaderSources;
+
+ShaderSources loadShadersFromFile(const char *filePath) {
+  ShaderSources sources = {NULL, NULL};
+  FILE *file = fopen(filePath, "r");
+
+  if (!file) {
+    fprintf(stderr, "Failed to open shader file: %s\n", filePath);
+    return sources;
+  }
+
+  char *vertexShaderSource = NULL;
+  char *fragmentShaderSource = NULL;
+
+  size_t vertexLength = 0;
+  size_t fragmentLength = 0;
+
+  char line[256];
+  enum { NONE, VERTEX, FRAGMENT } shaderType = NONE;
+
+  while (fgets(line, sizeof(line), file)) {
+    if (strncmp(line, "#shader", 7) == 0) {
+      if (strstr(line, "vertex")) {
+        shaderType = VERTEX;
+      } else if (strstr(line, "fragment")) {
+        shaderType = FRAGMENT;
+      }
+    } else {
+      if (shaderType == VERTEX) {
+        size_t lineLength = strlen(line);
+        vertexShaderSource =
+            realloc(vertexShaderSource, vertexLength + lineLength + 1);
+        if (vertexShaderSource == NULL) {
+          fprintf(stderr, "Failed to allocate memory for vertex shader\n");
+          break;
+        }
+        memcpy(vertexShaderSource + vertexLength, line, lineLength + 1);
+        vertexLength += lineLength;
+      } else if (shaderType == FRAGMENT) {
+        size_t lineLength = strlen(line);
+        fragmentShaderSource =
+            realloc(fragmentShaderSource, fragmentLength + lineLength + 1);
+        if (fragmentShaderSource == NULL) {
+          fprintf(stderr, "Failed to allocate memory for fragment shader\n");
+          break;
+        }
+        memcpy(fragmentShaderSource + fragmentLength, line, lineLength + 1);
+        fragmentLength += lineLength;
+      }
+    }
+  }
+
+  fclose(file);
+
+  sources.vertexShaderSource = vertexShaderSource;
+  sources.fragmentShaderSource = fragmentShaderSource;
+
+  return sources;
+}
 
 // Function to compile shaders and check for errors
 unsigned int compileShader(unsigned int type, const char *source) {
@@ -44,7 +88,6 @@ unsigned int compileShader(unsigned int type, const char *source) {
 
 unsigned int createShader(const char *vertexShaderSource,
                           const char *fragmentShaderSource) {
-
   // Build and compile our shader program
   unsigned int vertexShader =
       compileShader(GL_VERTEX_SHADER, vertexShaderSource);
@@ -123,11 +166,23 @@ int main(void) {
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
-  unsigned int shaderProgram =
-      createShader(vertexShaderSource, fragmentShaderSource);
+  ShaderSources shaderSources =
+      loadShadersFromFile("resources/shaders/basic.glsl");
+
+  printf("Vertex shader source:\n%s\nFragment shader source:\n%s\n",
+         shaderSources.vertexShaderSource, shaderSources.fragmentShaderSource);
+
+  unsigned int shaderProgram = createShader(shaderSources.vertexShaderSource,
+                                            shaderSources.fragmentShaderSource);
 
   // Define the vertices for a triangle
-  float vertices[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
+  float vertices[] = {-0.5f, 0.5f,  0.0f, 0.5f,  0.5f,  0.0f,
+                      0.5f,  -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
+
+  unsigned int indices[] = {
+      0, 1, 3, // first triangle
+      1, 2, 3  // second triangle
+  };
 
   // Create and bind a Vertex Array Object
   unsigned int VAO;
@@ -140,12 +195,19 @@ int main(void) {
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+  // Create and bind a Index Buffer Object
+  unsigned int IBO;
+  glGenBuffers(1, &IBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
   // Set the vertex attributes pointers
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  // Unbind the VBO and VAO
+  // Unbind the VBO and VAO and IBO
   glBindBuffer(GL_ARRAY_BUFFER, 0);
+  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
 
   // Rendering loop
@@ -158,7 +220,8 @@ int main(void) {
 
     // Draw the triangle
     glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
     glBindVertexArray(0);
 
     // Swap front and back buffers
@@ -172,6 +235,9 @@ int main(void) {
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
   glDeleteProgram(shaderProgram);
+
+  free(shaderSources.vertexShaderSource);
+  free(shaderSources.fragmentShaderSource);
 
   glfwDestroyWindow(window);
   glfwTerminate();
