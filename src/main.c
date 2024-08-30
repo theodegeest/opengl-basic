@@ -73,16 +73,6 @@ int main(void) {
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
-  // ShaderSources shaderSources =
-  //     loadShadersFromFile("resources/shaders/basic.glsl");
-  //
-  // printf("Vertex shader source:\n%s\nFragment shader source:\n%s\n",
-  //        shaderSources.vertexShaderSource,
-  //        shaderSources.fragmentShaderSource);
-  //
-  // unsigned int shaderProgram = createShader(shaderSources.vertexShaderSource,
-  //                                           shaderSources.fragmentShaderSource);
-
   Shader *shader = shader_create("resources/shaders/basic.glsl");
 
   // Define the vertices for a triangle
@@ -96,45 +86,22 @@ int main(void) {
 
   // Create and bind a Vertex Array Object
   VertexArray *va = vertex_array_create();
-  // vertex_array_bind(va);
-  // unsigned int VAO;
-  // glGenVertexArrays(1, &VAO);
-  // glBindVertexArray(VAO);
 
   // Create and bind a Vertex Buffer Object
   VertexBuffer *vb = vertex_buffer_create(vertices, sizeof(vertices));
-  // unsigned int VBO;
-  // glGenBuffers(1, &VBO);
-  // glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   VertexBufferLayout *layout = vertex_buffer_layout_create();
   vertex_buffer_layout_push_float(layout, 3);
   vertex_array_add_buffer(va, vb, layout);
   // glCheckError();
 
-  // Set the vertex attributes pointers
-  // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void
-  // *)0); glEnableVertexAttribArray(0);
-
   // Create and bind a Index Buffer Object
   IndexBuffer *ib = index_buffer_create(indices, 6);
-
-  // unsigned int IBO;
-  // glGenBuffers(1, &IBO);
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-  // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-  //              GL_STATIC_DRAW);
-
-  // int location = glGetUniformLocation(shaderProgram, "u_Color");
 
   // Unbind the VBO and VAO
   vertex_array_unbind();
   vertex_buffer_unbind();
   index_buffer_unbind();
-  // glBindVertexArray(0);
-  // glBindBuffer(GL_ARRAY_BUFFER, 0);
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
   float r = 0.0f;
   float r_inc = 0.002f;
@@ -145,27 +112,22 @@ int main(void) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Use our shader program
-    // glUseProgram(shaderProgram);
     shader_bind(shader);
 
     r += r_inc;
     if (r > 1) {
       r = 0.0f;
     }
-    // glUniform4f(location, r, 0.3f, 0.8f, 1.0f);
+
     shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
 
     // Draw the triangle
-    // glBindVertexArray(VAO);
     vertex_array_bind(va);
 
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-    glClearError();
+    // glClearError();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+    // glCheckError();
 
-    glCheckError();
-
-    // glBindVertexArray(0);
     vertex_array_unbind();
 
     // Swap front and back buffers
@@ -176,19 +138,12 @@ int main(void) {
   }
 
   // Clean up
-  // glDeleteVertexArrays(1, &VAO);
-  // glDeleteBuffers(1, &VBO);
-  // glDeleteBuffers(1, &IBO);
   vertex_array_free(va);
   vertex_buffer_free(vb);
   index_buffer_free(ib);
   vertex_buffer_layout_free(layout);
-  // glDeleteProgram(shaderProgram);
 
   shader_free(shader);
-
-  // free(shaderSources.vertexShaderSource);
-  // free(shaderSources.fragmentShaderSource);
 
   glfwDestroyWindow(window);
   glfwTerminate();
