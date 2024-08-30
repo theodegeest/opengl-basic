@@ -9,6 +9,7 @@
 #include "index_buffer.h"
 #include "renderer.h"
 #include "shader.h"
+#include "texture.h"
 #include "vertex_array.h"
 #include "vertex_buffer.h"
 #include "vertex_buffer_layout.h"
@@ -75,15 +76,20 @@ int main(void) {
   glfwSetKeyCallback(window, key_callback);
 
   Shader *shader = shader_create("resources/shaders/basic.glsl");
+  shader_bind(shader);
 
   // Define the vertices for a triangle
-  float vertices[] = {-0.5f, 0.5f,  0.0f, 0.5f,  0.5f,  0.0f,
-                      0.5f,  -0.5f, 0.0f, -0.5f, -0.5f, 0.0f};
+  float vertices[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 0.5f, -0.5f,
+                      0.0f,  1.0f,  0.0f, 0.5f, 0.5f, 0.0f, 1.0f,
+                      1.0f,  -0.5f, 0.5f, 0.0f, 0.0f, 1.0f};
 
   unsigned int indices[] = {
       0, 1, 3, // first triangle
       1, 2, 3  // second triangle
   };
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // FIX:
 
   // Create and bind a Vertex Array Object
   VertexArray *va = vertex_array_create();
@@ -93,11 +99,21 @@ int main(void) {
 
   VertexBufferLayout *layout = vertex_buffer_layout_create();
   vertex_buffer_layout_push_float(layout, 3);
+  vertex_buffer_layout_push_float(layout, 2);
   vertex_array_add_buffer(va, vb, layout);
   // glCheckError();
 
   // Create and bind a Index Buffer Object
   IndexBuffer *ib = index_buffer_create(indices, 6);
+
+  // glClearError();
+  Texture *texture = texture_create("resources/textures/opengl.png");
+  // glCheckError();
+  texture_bind(texture, 0);
+  // glClearError();
+  shader_uniform_set_1i(shader, "u_Texture", 0);
+  // glCheckError();
+
 
   // Unbind the VBO and VAO
   vertex_array_unbind();
@@ -150,6 +166,7 @@ int main(void) {
 
   shader_free(shader);
   renderer_free(renderer);
+  texture_free(texture);
 
   glfwDestroyWindow(window);
   glfwTerminate();

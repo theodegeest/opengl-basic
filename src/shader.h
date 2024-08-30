@@ -11,17 +11,18 @@ typedef struct {
 
 typedef struct {
   unsigned int id;
-  const char *filePath;
+  const char *file_path;
   ShaderSources sources;
   MapCharInt *locations;
 } Shader;
 
-Shader *shader_create(const char *filePath);
+Shader *shader_create(const char *file_path);
 void shader_free(Shader *shader);
 
 void shader_bind(Shader *shader);
 void shader_unbind();
 
+void shader_uniform_set_1i(Shader *shader, const char *name, int v0);
 void shader_uniform_set_1f(Shader *shader, const char *name, float v0);
 void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
                            float v2, float v3);

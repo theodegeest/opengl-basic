@@ -7,7 +7,7 @@
 #include <string.h>
 
 static int _shader_uniform_location_get(Shader *shader, const char *name);
-static ShaderSources _shader_load_file(const char *filePath);
+static ShaderSources _shader_load_file(const char *file_path);
 static unsigned int _shader_compile(unsigned int type, const char *source);
 static unsigned int _shader_create(const char *vertexShaderSource,
                                    const char *fragmentShaderSource);
@@ -16,13 +16,13 @@ static unsigned int _shader_create(const char *vertexShaderSource,
                               PUBLIC FUNCTIONS                                *
 *******************************************************************************/
 
-Shader *shader_create(const char *filePath) {
+Shader *shader_create(const char *file_path) {
   Shader *shader = malloc(sizeof(Shader));
 
   shader->id = 0;
-  shader->filePath = filePath;
+  shader->file_path = file_path;
 
-  ShaderSources sources = _shader_load_file(filePath);
+  ShaderSources sources = _shader_load_file(file_path);
   shader->sources = sources;
 
   printf("Vertex shader source:\n%s\nFragment shader source:\n%s\n",
@@ -47,13 +47,17 @@ void shader_free(Shader *shader) {
 void shader_bind(Shader *shader) { glUseProgram(shader->id); }
 void shader_unbind() { glUseProgram(0); }
 
-void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
-                           float v2, float v3) {
-  glUniform4f(_shader_uniform_location_get(shader, name), v0, v1, v2, v3);
+void shader_uniform_set_1i(Shader *shader, const char *name, int v0) {
+  glUniform1i(_shader_uniform_location_get(shader, name), v0);
 }
 
 void shader_uniform_set_1f(Shader *shader, const char *name, float v0) {
   glUniform1f(_shader_uniform_location_get(shader, name), v0);
+}
+
+void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
+                           float v2, float v3) {
+  glUniform4f(_shader_uniform_location_get(shader, name), v0, v1, v2, v3);
 }
 
 /******************************************************************************
@@ -71,7 +75,7 @@ static int _shader_uniform_location_get(Shader *shader, const char *name) {
   int location = glGetUniformLocation(shader->id, name);
 
   if (location == -1) {
-    printf("[Shader Warning] Uniform location of '%s' doesn't exist", name);
+    printf("[Shader Warning] Uniform location of '%s' doesn't exist\n", name);
   } else {
     map_char_int_put(shader->locations, name, location);
   }
@@ -79,12 +83,12 @@ static int _shader_uniform_location_get(Shader *shader, const char *name) {
   return location;
 }
 
-static ShaderSources _shader_load_file(const char *filePath) {
+static ShaderSources _shader_load_file(const char *file_path) {
   ShaderSources sources = {NULL, NULL};
-  FILE *file = fopen(filePath, "r");
+  FILE *file = fopen(file_path, "r");
 
   if (!file) {
-    fprintf(stderr, "Failed to open shader file: %s\n", filePath);
+    fprintf(stderr, "Failed to open shader file: %s\n", file_path);
     return sources;
   }
 
