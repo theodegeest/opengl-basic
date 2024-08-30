@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "index_buffer.h"
+#include "renderer.h"
 #include "shader.h"
 #include "vertex_array.h"
 #include "vertex_buffer.h"
@@ -61,10 +62,10 @@ int main(void) {
     return -1;
   }
 
-  const GLubyte *renderer = glGetString(GL_RENDERER); // get the GPU renderer
-  const GLubyte *version = glGetString(GL_VERSION);   // get the OpenGL version
+  const GLubyte *gl_renderer = glGetString(GL_RENDERER); // get the GPU renderer
+  const GLubyte *version = glGetString(GL_VERSION); // get the OpenGL version
 
-  printf("Renderer: %s\n", renderer);
+  printf("Renderer: %s\n", gl_renderer);
   printf("OpenGL version supported %s\n", version);
 
   // Set a clear color to distinguish the triangle
@@ -106,26 +107,30 @@ int main(void) {
   float r = 0.0f;
   float r_inc = 0.002f;
 
+  Renderer *renderer = renderer_create();
+
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
-    // Clear the screen
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // Use our shader program
-    shader_bind(shader);
-
     r += r_inc;
     if (r > 1) {
       r = 0.0f;
     }
+    // Clear the screen
+    // glClear(GL_COLOR_BUFFER_BIT);
+    renderer_clear(renderer);
+
+    // Use our shader program
+    shader_bind(shader);
 
     shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
+    // glCheckError();
 
     // Draw the triangle
-    vertex_array_bind(va);
+    // vertex_array_bind(va);
 
+    renderer_draw(renderer, va, ib, shader);
     // glClearError();
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
     // glCheckError();
 
     vertex_array_unbind();
@@ -144,6 +149,7 @@ int main(void) {
   vertex_buffer_layout_free(layout);
 
   shader_free(shader);
+  renderer_free(renderer);
 
   glfwDestroyWindow(window);
   glfwTerminate();
