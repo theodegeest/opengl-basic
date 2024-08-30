@@ -153,7 +153,7 @@ int main(void) {
       r = 0.0f;
     }
     // glUniform4f(location, r, 0.3f, 0.8f, 1.0f);
-    shader_uniform_set_4f(shader, "u_Color", 0, r, 0.3f, 0.8f, 1.0f);
+    shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
 
     // Draw the triangle
     // glBindVertexArray(VAO);

@@ -47,9 +47,13 @@ void shader_free(Shader *shader) {
 void shader_bind(Shader *shader) { glUseProgram(shader->id); }
 void shader_unbind() { glUseProgram(0); }
 
-void shader_uniform_set_4f(Shader *shader, const char *name, size_t name_size,
-                           float v0, float v1, float v2, float v3) {
+void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
+                           float v2, float v3) {
   glUniform4f(_shader_uniform_location_get(shader, name), v0, v1, v2, v3);
+}
+
+void shader_uniform_set_1f(Shader *shader, const char *name, float v0) {
+  glUniform1f(_shader_uniform_location_get(shader, name), v0);
 }
 
 /******************************************************************************
