@@ -18,13 +18,6 @@ VertexArray *vertex_array_create() {
   return va;
 }
 
-static void glCheckError() {
-  GLenum error;
-  while ((error = glGetError())) {
-    printf("[OpenGL Error] (%u)\n", error);
-  }
-}
-
 void vertex_array_free(VertexArray *vertexArray) {
   glDeleteVertexArrays(1, &vertexArray->id);
   free(vertexArray);
@@ -43,10 +36,8 @@ void vertex_array_add_buffer(VertexArray *va, VertexBuffer *vb,
 
     glEnableVertexAttribArray(i);
     glVertexAttribPointer(i, element.count, element.type, GL_FALSE,
-                          layout->stride, (void *)offset);
-    // glEnableVertexAttribArray(0);
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
-    //                       (void *)0);
+                          layout->stride, (void *)(size_t)offset);
+
     offset += element.count * vertex_buffer_element_sizeof_type(element.type);
   }
 }
