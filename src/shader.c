@@ -2,6 +2,7 @@
 
 #include "../include/glad/glad.h"
 #include "map.h"
+#include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,8 +26,8 @@ Shader *shader_create(const char *file_path) {
   ShaderSources sources = _shader_load_file(file_path);
   shader->sources = sources;
 
-  printf("Vertex shader source:\n%s\nFragment shader source:\n%s\n",
-         sources.vertexShaderSource, sources.fragmentShaderSource);
+  // printf("Vertex shader source:\n%s\nFragment shader source:\n%s\n",
+  //        sources.vertexShaderSource, sources.fragmentShaderSource);
 
   shader->id =
       _shader_create(sources.vertexShaderSource, sources.fragmentShaderSource);
@@ -37,27 +38,27 @@ Shader *shader_create(const char *file_path) {
 }
 
 void shader_free(Shader *shader) {
-  glDeleteProgram(shader->id);
+  GLCall(glDeleteProgram(shader->id));
   free(shader->sources.vertexShaderSource);
   free(shader->sources.fragmentShaderSource);
   map_char_int_free(shader->locations);
   free(shader);
 }
 
-void shader_bind(Shader *shader) { glUseProgram(shader->id); }
-void shader_unbind() { glUseProgram(0); }
+void shader_bind(Shader *shader) { GLCall(glUseProgram(shader->id)); }
+void shader_unbind() { GLCall(glUseProgram(0)); }
 
 void shader_uniform_set_1i(Shader *shader, const char *name, int v0) {
-  glUniform1i(_shader_uniform_location_get(shader, name), v0);
+  GLCall(glUniform1i(_shader_uniform_location_get(shader, name), v0));
 }
 
 void shader_uniform_set_1f(Shader *shader, const char *name, float v0) {
-  glUniform1f(_shader_uniform_location_get(shader, name), v0);
+  GLCall(glUniform1f(_shader_uniform_location_get(shader, name), v0));
 }
 
 void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
                            float v2, float v3) {
-  glUniform4f(_shader_uniform_location_get(shader, name), v0, v1, v2, v3);
+  GLCall(glUniform4f(_shader_uniform_location_get(shader, name), v0, v1, v2, v3));
 }
 
 /******************************************************************************
@@ -72,7 +73,7 @@ static int _shader_uniform_location_get(Shader *shader, const char *name) {
   }
 
   // printf("Location has not been found in cache\n");
-  int location = glGetUniformLocation(shader->id, name);
+  GLCall(int location = glGetUniformLocation(shader->id, name));
 
   if (location == -1) {
     printf("[Shader Warning] Uniform location of '%s' doesn't exist\n", name);
@@ -143,16 +144,16 @@ static ShaderSources _shader_load_file(const char *file_path) {
 
 // Function to compile shaders and check for errors
 static unsigned int _shader_compile(unsigned int type, const char *source) {
-  unsigned int shader = glCreateShader(type);
-  glShaderSource(shader, 1, &source, NULL);
-  glCompileShader(shader);
+  GLCall(unsigned int shader = glCreateShader(type));
+  GLCall(glShaderSource(shader, 1, &source, NULL));
+  GLCall(glCompileShader(shader));
 
   // Check for shader compile errors
   int success;
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  GLCall(glGetShaderiv(shader, GL_COMPILE_STATUS, &success));
   if (!success) {
     char infoLog[512];
-    glGetShaderInfoLog(shader, 512, NULL, infoLog);
+    GLCall(glGetShaderInfoLog(shader, 512, NULL, infoLog));
     printf("ERROR::SHADER::COMPILATION_FAILED\n%s\n", infoLog);
   }
   return shader;
@@ -167,24 +168,24 @@ static unsigned int _shader_create(const char *vertexShaderSource,
       _shader_compile(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
   // Link shaders into a program
-  unsigned int shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
+  GLCall(unsigned int shaderProgram = glCreateProgram());
+  GLCall(glAttachShader(shaderProgram, vertexShader));
+  GLCall(glAttachShader(shaderProgram, fragmentShader));
+  GLCall(glLinkProgram(shaderProgram));
 
   // Check for linking errors
   int success;
   char infoLog[512];
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+  GLCall(glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success));
   if (!success) {
-    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+    GLCall(glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog));
     printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
   }
 
   // Clean up shaders as they are now linked into our program and no longer
   // necessary
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  GLCall(glDeleteShader(vertexShader));
+  GLCall(glDeleteShader(fragmentShader));
 
   return shaderProgram;
 }

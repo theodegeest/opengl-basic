@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "../include/glad/glad.h"
+#include "debug.h"
 
 /******************************************************************************
                               PUBLIC FUNCTIONS                                *
@@ -10,22 +11,22 @@
 VertexBuffer *vertex_buffer_create(const void *data, unsigned int size) {
   VertexBuffer *vb = malloc(sizeof(VertexBuffer));
 
-  glGenBuffers(1, &vb->id);
-  glBindBuffer(GL_ARRAY_BUFFER, vb->id);
-  glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+  GLCall(glGenBuffers(1, &vb->id));
+  GLCall(glBindBuffer(GL_ARRAY_BUFFER, vb->id));
+  GLCall(glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW));
 
   return vb;
 }
 
 void vertex_buffer_free(VertexBuffer *vertexBuffer) {
-  glDeleteBuffers(1, &vertexBuffer->id);
+  GLCall(glDeleteBuffers(1, &vertexBuffer->id));
   free(vertexBuffer);
 }
 
 void vertex_buffer_bind(VertexBuffer *vertexBuffer) {
-  glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer->id);
+  GLCall(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer->id));
 }
-void vertex_buffer_unbind() { glBindBuffer(GL_ARRAY_BUFFER, 0); }
+void vertex_buffer_unbind() { GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0)); }
 
 /******************************************************************************
                               PRIVATE FUNCTIONS                               *

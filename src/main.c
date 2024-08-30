@@ -13,18 +13,8 @@
 #include "vertex_array.h"
 #include "vertex_buffer.h"
 #include "vertex_buffer_layout.h"
+#include "debug.h"
 
-void glClearError() {
-  while (glGetError() != GL_NO_ERROR) {
-  }
-}
-
-void glCheckError() {
-  GLenum error;
-  while ((error = glGetError())) {
-    printf("[OpenGL Error] (%u)\n", error);
-  }
-}
 
 // Function to handle key events
 void key_callback(GLFWwindow *window, int key, int scancode, int action,
@@ -67,10 +57,10 @@ int main(void) {
   const GLubyte *version = glGetString(GL_VERSION); // get the OpenGL version
 
   printf("Renderer: %s\n", gl_renderer);
-  printf("OpenGL version supported %s\n", version);
+  printf("OpenGL version supported %s\n\n", version);
 
   // Set a clear color to distinguish the triangle
-  glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+  GLCall(glClearColor(0.2f, 0.3f, 0.3f, 1.0f));
 
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
@@ -88,8 +78,8 @@ int main(void) {
       1, 2, 3  // second triangle
   };
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // FIX:
+  GLCall(glEnable(GL_BLEND));
+  GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); // FIX:
 
   // Create and bind a Vertex Array Object
   VertexArray *va = vertex_array_create();
