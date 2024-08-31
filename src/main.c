@@ -73,6 +73,7 @@ int main(void) {
 
   // Make the window's context current
   glfwMakeContextCurrent(window);
+  glfwSwapInterval(0);
 
   // Load OpenGL function pointers with GLAD
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -157,9 +158,31 @@ int main(void) {
 
   Renderer *renderer = renderer_create();
 
+  struct timespec lastTime, currentTime;
+  double deltaTime = 0;
+  double fps = 0;
 
+  // Initialize lastTime using CLOCK_MONOTONIC
+  clock_gettime(CLOCK_MONOTONIC, &lastTime);
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
+    // // Get the current time using CLOCK_MONOTONIC
+    clock_gettime(CLOCK_MONOTONIC, &currentTime);
+
+    // Calculate delta time in seconds
+    deltaTime = (currentTime.tv_sec - lastTime.tv_sec) +
+                (currentTime.tv_nsec - lastTime.tv_nsec) / 1000000000.0;
+
+    // Update lastTime for the next loop iteration
+    lastTime = currentTime;
+
+    // Calculate the framerate
+    if (deltaTime > 0) {
+      fps = 1.0 / deltaTime;
+    }
+
+    // Display the framerate (for debugging)
+    // printf("FPS: %.2f\n", fps);
 
     //--------------------------nk------------------------------
     // create a new frame for every iteration of the loop
@@ -178,6 +201,18 @@ int main(void) {
     if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
                  NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
                      NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE)) {
+
+      nk_layout_row_begin(context, NK_STATIC, 30, 2);
+      {
+        nk_layout_row_push(context, 30);
+        nk_label(context, "fps:", NK_TEXT_LEFT);
+        nk_layout_row_push(context, 50);
+        char string_fps[7];
+        gcvt(fps, 6, string_fps);
+        nk_label(context, string_fps, NK_TEXT_LEFT);
+      }
+      nk_layout_row_end(context);
+
       /* fixed widget pixel width */
       nk_layout_row_static(context, 30, 80, 1);
       if (nk_button_label(context, "button")) {
@@ -266,7 +301,6 @@ int main(void) {
     // Draw the triangle
     // vertex_array_bind(va);
 
-
     renderer_draw(renderer, va, ib, shader);
     // glClearError();
     // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
@@ -278,7 +312,6 @@ int main(void) {
     // don't forget to draw your window!
     nk_glfw3_render(NK_ANTI_ALIASING_ON);
     //---------------------------------------------------------------
-
     // Swap front and back buffers
     glfwSwapBuffers(window);
 
