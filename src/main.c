@@ -192,30 +192,42 @@ int main(void) {
         op = HARD;
 
       /* custom widget pixel width */
-      nk_layout_row_begin(context, NK_STATIC, 30, 2);
+      nk_layout_row_begin(context, NK_STATIC, 30, 3);
       {
-        nk_layout_row_push(context, 50);
+        nk_layout_row_push(context, 20);
         nk_label(context, "X:", NK_TEXT_LEFT);
+        nk_layout_row_push(context, 30);
+        char val[10];
+        gcvt(value_x, 9, val);
+        nk_label(context, val, NK_TEXT_LEFT);
         nk_layout_row_push(context, 110);
         nk_slider_float(context, -100.0f, &value_x, 100.0f, 1.0f);
       }
       nk_layout_row_end(context);
 
       /* custom widget pixel width */
-      nk_layout_row_begin(context, NK_STATIC, 30, 2);
+      nk_layout_row_begin(context, NK_STATIC, 30, 3);
       {
-        nk_layout_row_push(context, 50);
+        nk_layout_row_push(context, 20);
         nk_label(context, "Y:", NK_TEXT_LEFT);
+        nk_layout_row_push(context, 30);
+        char val[10];
+        gcvt(value_y, 9, val);
+        nk_label(context, val, NK_TEXT_LEFT);
         nk_layout_row_push(context, 110);
         nk_slider_float(context, -100.0f, &value_y, 100.0f, 1.0f);
       }
       nk_layout_row_end(context);
 
       /* custom widget pixel width */
-      nk_layout_row_begin(context, NK_STATIC, 30, 2);
+      nk_layout_row_begin(context, NK_STATIC, 30, 3);
       {
-        nk_layout_row_push(context, 50);
+        nk_layout_row_push(context, 20);
         nk_label(context, "Z:", NK_TEXT_LEFT);
+        nk_layout_row_push(context, 30);
+        char val[10];
+        gcvt(value_z, 9, val);
+        nk_label(context, val, NK_TEXT_LEFT);
         nk_layout_row_push(context, 110);
         nk_slider_float(context, -100.0f, &value_z, 100.0f, 1.0f);
       }
