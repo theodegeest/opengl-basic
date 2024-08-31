@@ -117,9 +117,6 @@ int main(void) {
       1, 2, 3  // second triangle
   };
 
-  GLCall(glEnable(GL_BLEND));
-  GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-
   // Create and bind a Vertex Array Object
   VertexArray *va = vertex_array_create();
 
@@ -160,6 +157,7 @@ int main(void) {
 
   Renderer *renderer = renderer_create();
 
+
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
 
@@ -167,6 +165,9 @@ int main(void) {
     // create a new frame for every iteration of the loop
     // here we set up the nk_window
     nk_glfw3_new_frame();
+
+    GLCall(glEnable(GL_BLEND));
+    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     enum { EASY, HARD };
     static int op = EASY;
@@ -245,7 +246,6 @@ int main(void) {
     glm_mul(proj, view, mvp);
     glm_mul(mvp, model, mvp);
 
-
     r += r_inc;
     if (r > 1) {
       r = 0.0f;
@@ -257,12 +257,15 @@ int main(void) {
     // Use our shader program
     shader_bind(shader);
 
+    texture_bind(texture, 0);
+
     // shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
     shader_uniform_set_mat4f(shader, "u_MVP", mvp);
     // glCheckError();
 
     // Draw the triangle
     // vertex_array_bind(va);
+
 
     renderer_draw(renderer, va, ib, shader);
     // glClearError();
