@@ -2,6 +2,7 @@
 #define SHADER_H_
 
 #include "map.h"
+#include <cglm/types.h>
 #include <stdlib.h>
 
 typedef struct {
@@ -26,5 +27,6 @@ void shader_uniform_set_1i(Shader *shader, const char *name, int v0);
 void shader_uniform_set_1f(Shader *shader, const char *name, float v0);
 void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
                            float v2, float v3);
+void shader_uniform_set_mat4f(Shader *shader, const char *name, mat4 v0);
 
 #endif // !SHADER_H_

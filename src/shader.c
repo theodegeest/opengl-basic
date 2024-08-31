@@ -61,6 +61,10 @@ void shader_uniform_set_4f(Shader *shader, const char *name, float v0, float v1,
   GLCall(glUniform4f(_shader_uniform_location_get(shader, name), v0, v1, v2, v3));
 }
 
+void shader_uniform_set_mat4f(Shader *shader, const char *name, mat4 v0) {
+  GLCall(glUniformMatrix4fv(_shader_uniform_location_get(shader, name), 1, GL_FALSE, &v0[0][0]));
+}
+
 /******************************************************************************
                               PRIVATE FUNCTIONS                               *
 *******************************************************************************/
