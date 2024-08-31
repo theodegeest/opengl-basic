@@ -109,9 +109,9 @@ int main(void) {
   shader_bind(shader);
 
   // Define the vertices for a triangle
-  float vertices[] = {100.0f, 100.0f, 0.0f,   0.0f,   0.0f,   200.0f, 100.0f,
-                      0.0f,   1.0f,   0.0f,   200.0f, 200.0f, 0.0f,   1.0f,
-                      1.0f,   100.0f, 200.0f, 0.0f,   0.0f,   1.0f};
+  float vertices[] = {-50.0f, -50.0f, 0.0f,  0.0f,  0.0f,  50.0f, -50.0f,
+                      0.0f,   1.0f,   0.0f,  50.0f, 50.0f, 0.0f,  1.0f,
+                      1.0f,   -50.0f, 50.0f, 0.0f,  0.0f,  1.0f};
 
   unsigned int indices[] = {
       0, 1, 3, // first triangle
@@ -138,7 +138,7 @@ int main(void) {
 
   mat4 view;
   glm_mat4_identity(view);
-  glm_translate(view, (vec3){100.0f, 0.0f, 0.0f});
+  glm_translate(view, (vec3){0.0f, 0.0f, 0.0f});
 
   // glClearError();
   Texture *texture = texture_create("resources/textures/square.png");
@@ -201,7 +201,6 @@ int main(void) {
     if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
                  NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
                      NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE)) {
-
       nk_layout_row_begin(context, NK_STATIC, 30, 2);
       {
         nk_layout_row_push(context, 30);
@@ -273,14 +272,6 @@ int main(void) {
     //------------------------------------------------------------
     // printf("%f\n", value);
 
-    mat4 model;
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3){value_x, value_y, value_z});
-
-    mat4 mvp;
-    glm_mul(proj, view, mvp);
-    glm_mul(mvp, model, mvp);
-
     r += r_inc;
     if (r > 1) {
       r = 0.0f;
@@ -295,13 +286,35 @@ int main(void) {
     texture_bind(texture, 0);
 
     // shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
-    shader_uniform_set_mat4f(shader, "u_MVP", mvp);
-    // glCheckError();
 
-    // Draw the triangle
-    // vertex_array_bind(va);
+    {
+      mat4 model;
+      glm_mat4_identity(model);
+      glm_translate(model, (vec3){value_x, value_y, value_z});
 
-    renderer_draw(renderer, va, ib, shader);
+      mat4 mvp;
+      glm_mul(proj, view, mvp);
+      glm_mul(mvp, model, mvp);
+
+      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
+
+      renderer_draw(renderer, va, ib, shader);
+    }
+
+    {
+      mat4 model;
+      glm_mat4_identity(model);
+      glm_translate(model, (vec3){300.0f, 100.0f, 0.0f});
+      glm_translate(model, (vec3){value_x * 2, value_y * 2, value_z});
+
+      mat4 mvp;
+      glm_mul(proj, view, mvp);
+      glm_mul(mvp, model, mvp);
+
+      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
+
+      renderer_draw(renderer, va, ib, shader);
+    }
     // glClearError();
     // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
     // glCheckError();
