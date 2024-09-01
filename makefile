@@ -4,6 +4,7 @@ OBJS = $(patsubst %.c, $(OBJ)/%.o, $(SRCS))
 
 CC := gcc
 CFLAGS := -Wall
+# CFLAGS := -Wall -O3
 LFLAGS := -lglfw -ldl -lm -lcglm -lGL
 ZIPNAME := project.zip
 BIN := bin

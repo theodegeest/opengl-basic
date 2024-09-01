@@ -34,9 +34,6 @@ static void on_update(void *obj, float delta_time) {
 static void on_render(void *obj) {
   // printf("Clear Color On Render\n");
   ClearColorObj *c_obj = (ClearColorObj *)obj;
-  // GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
-  //                     c_obj->clear_color.b, c_obj->clear_color.a));
-  // GLCall(glClear(GL_COLOR_BUFFER_BIT));
   renderer_clear(c_obj->renderer);
 
   // Use our shader program
@@ -44,12 +41,10 @@ static void on_render(void *obj) {
 
   texture_bind(c_obj->texture, 0);
 
-  // shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
-
   {
     mat4 model;
-    // glm_mat4_identity(model);
-    glm_translate_make(model,
+    glm_translate_make(model, (vec3){100.0f, 100.0f, 0.0f});
+    glm_translate(model,
                        (vec3){c_obj->value_x, c_obj->value_y, c_obj->value_z});
 
     mat4 mvp;
@@ -63,7 +58,6 @@ static void on_render(void *obj) {
 
   {
     mat4 model;
-    // glm_mat4_identity(model);
     glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
     glm_translate(
         model, (vec3){c_obj->value_x * 2, c_obj->value_y * 2, c_obj->value_z});
@@ -76,9 +70,6 @@ static void on_render(void *obj) {
 
     renderer_draw(c_obj->renderer, c_obj->va, c_obj->ib, c_obj->shader);
   }
-  // glClearError();
-  // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
-  // glCheckError();
 
   vertex_array_unbind();
 }
@@ -127,15 +118,6 @@ static void on_ui_render(void *obj, void *context) {
     nk_slider_float(context, -100.0f, &c_obj->value_z, 100.0f, 1.0f);
   }
   nk_layout_row_end(context);
-
-  // nk_layout_row_push(context, 110);
-  // nk_label(context, "Clear Color:", NK_TEXT_LEFT);
-  // nk_layout_row_begin(context, NK_STATIC, 90, 1);
-  // {
-  //   nk_layout_row_push(context, 150);
-  //   c_obj->clear_color =
-  //       nk_color_picker(context, c_obj->clear_color, NK_RGBA);
-  // }
 }
 
 static void on_free(void *test) {
@@ -165,8 +147,6 @@ Test *test_texture_init() {
   ClearColorObj *obj = malloc(sizeof(ClearColorObj));
   test->obj = obj;
 
-  // obj->clear_color = (struct nk_colorf){0.2f, 0.3f, 0.3f, 1.0f};
-
   obj->value_x = 0.0f;
   obj->value_y = 0.0f;
   obj->value_z = 0.0f;
@@ -175,7 +155,7 @@ Test *test_texture_init() {
 
   renderer_set_clear_color(obj->renderer, (float[]){0.2f, 0.3f, 0.3f, 1.0f});
 
-  obj->shader = shader_create("resources/shaders/basic.glsl");
+  obj->shader = shader_create("resources/shaders/texture.glsl");
   shader_bind(obj->shader);
 
   float vertices[] = {-50.0f, -50.0f, 0.0f,  0.0f,  0.0f,  50.0f, -50.0f,
@@ -197,7 +177,6 @@ Test *test_texture_init() {
   vertex_buffer_layout_push_float(obj->layout, 3);
   vertex_buffer_layout_push_float(obj->layout, 2);
   vertex_array_add_buffer(obj->va, obj->vb, obj->layout);
-  // glCheckError();
 
   // Create and bind a Index Buffer Object
   obj->ib = index_buffer_create(indices, 6);
@@ -207,13 +186,9 @@ Test *test_texture_init() {
   glm_mat4_identity(obj->view);
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});
 
-  // glClearError();
   obj->texture = texture_create("resources/textures/opengl.png");
-  // glCheckError();
   texture_bind(obj->texture, 0);
-  // glClearError();
   shader_uniform_set_1i(obj->shader, "u_Texture", 0);
-  // glCheckError();
 
   // Unbind the VBO and VAO
   vertex_array_unbind();
