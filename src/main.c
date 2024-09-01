@@ -1,4 +1,6 @@
 #include "../include/glad/glad.h"
+#include "tests/test.h"
+#include "tests/test_clear_color.h"
 #include <GLFW/glfw3.h>
 // #include <cglm/affine-mat.h>
 // #include <cglm/affine-pre.h>
@@ -108,7 +110,6 @@ int main(void) {
   Shader *shader = shader_create("resources/shaders/basic.glsl");
   shader_bind(shader);
 
-  // Define the vertices for a triangle
   float vertices[] = {-50.0f, -50.0f, 0.0f,  0.0f,  0.0f,  50.0f, -50.0f,
                       0.0f,   1.0f,   0.0f,  50.0f, 50.0f, 0.0f,  1.0f,
                       1.0f,   -50.0f, 50.0f, 0.0f,  0.0f,  1.0f};
@@ -158,28 +159,82 @@ int main(void) {
 
   Renderer *renderer = renderer_create();
 
-  struct timespec lastTime, currentTime;
-  double deltaTime = 0;
+  Test *test = test_clear_color_init();
+
+  struct timespec last_time, current_time;
+  double delta_time = 0;
   double fps = 0;
 
+  static float value_x = 0.0f;
+  static float value_y = 0.0f;
+  static float value_z = 0.0f;
+
   // Initialize lastTime using CLOCK_MONOTONIC
-  clock_gettime(CLOCK_MONOTONIC, &lastTime);
+  clock_gettime(CLOCK_MONOTONIC, &last_time);
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
     // // Get the current time using CLOCK_MONOTONIC
-    clock_gettime(CLOCK_MONOTONIC, &currentTime);
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
 
     // Calculate delta time in seconds
-    deltaTime = (currentTime.tv_sec - lastTime.tv_sec) +
-                (currentTime.tv_nsec - lastTime.tv_nsec) / 1000000000.0;
+    delta_time = (current_time.tv_sec - last_time.tv_sec) +
+                 (current_time.tv_nsec - last_time.tv_nsec) / 1000000000.0;
 
     // Update lastTime for the next loop iteration
-    lastTime = currentTime;
+    last_time = current_time;
 
     // Calculate the framerate
-    if (deltaTime > 0) {
-      fps = 1.0 / deltaTime;
+    if (delta_time > 0) {
+      fps = 1.0 / delta_time;
     }
+
+    test_on_update(test, delta_time);
+
+    GLCall(glEnable(GL_BLEND));
+    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+    test_on_render(test);
+
+    // Use our shader program
+    shader_bind(shader);
+
+    texture_bind(texture, 0);
+
+    // shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
+
+    {
+      mat4 model;
+      // glm_mat4_identity(model);
+      glm_translate_make(model, (vec3){value_x, value_y, value_z});
+
+      mat4 mvp;
+      glm_mat4_mul(proj, view, mvp);
+      glm_mat4_mul(mvp, model, mvp);
+
+      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
+
+      renderer_draw(renderer, va, ib, shader);
+    }
+
+    {
+      mat4 model;
+      // glm_mat4_identity(model);
+      glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
+      glm_translate(model, (vec3){value_x * 2, value_y * 2, value_z});
+
+      mat4 mvp;
+      glm_mat4_mul(proj, view, mvp);
+      glm_mat4_mul(mvp, model, mvp);
+
+      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
+
+      renderer_draw(renderer, va, ib, shader);
+    }
+    // glClearError();
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+    // glCheckError();
+
+    vertex_array_unbind();
 
     // Display the framerate (for debugging)
     // printf("FPS: %.2f\n", fps);
@@ -189,15 +244,11 @@ int main(void) {
     // here we set up the nk_window
     nk_glfw3_new_frame();
 
-    GLCall(glEnable(GL_BLEND));
-    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
     enum { EASY, HARD };
     static int op = EASY;
-    static float value_x = 0.0f;
-    static float value_y = 0.0f;
-    static float value_z = 0.0f;
     static int i = 20;
+
     if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
                  NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
                      NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE)) {
@@ -267,10 +318,18 @@ int main(void) {
         nk_slider_float(context, -100.0f, &value_z, 100.0f, 1.0f);
       }
       nk_layout_row_end(context);
+
+      test_on_ui_render(test, context);
     }
     nk_end(context);
     //------------------------------------------------------------
     // printf("%f\n", value);
+
+    // float *color_obj = (float *)(test->obj);
+    // color_obj[0] = clear_color.r;
+    // color_obj[1] = clear_color.g;
+    // color_obj[2] = clear_color.b;
+    // color_obj[3] = clear_color.a;
 
     r += r_inc;
     if (r > 1) {
@@ -278,48 +337,7 @@ int main(void) {
     }
     // Clear the screen
     // glClear(GL_COLOR_BUFFER_BIT);
-    renderer_clear(renderer);
-
-    // Use our shader program
-    shader_bind(shader);
-
-    texture_bind(texture, 0);
-
-    // shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
-
-    {
-      mat4 model;
-      // glm_mat4_identity(model);
-      glm_translate_make(model, (vec3){value_x, value_y, value_z});
-
-      mat4 mvp;
-      glm_mat4_mul(proj, view, mvp);
-      glm_mat4_mul(mvp, model, mvp);
-
-      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
-
-      renderer_draw(renderer, va, ib, shader);
-    }
-
-    {
-      mat4 model;
-      // glm_mat4_identity(model);
-      glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
-      glm_translate(model, (vec3){value_x * 2, value_y * 2, value_z});
-
-      mat4 mvp;
-      glm_mat4_mul(proj, view, mvp);
-      glm_mat4_mul(mvp, model, mvp);
-
-      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
-
-      renderer_draw(renderer, va, ib, shader);
-    }
-    // glClearError();
-    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
-    // glCheckError();
-
-    vertex_array_unbind();
+    // renderer_clear(renderer);
 
     //-------------------------nk------------------------------------
     // don't forget to draw your window!
@@ -341,6 +359,7 @@ int main(void) {
   shader_free(shader);
   renderer_free(renderer);
   texture_free(texture);
+  test_on_free(test);
 
   //-------------------------nk------------------------------------
   nk_glfw3_shutdown();
