@@ -1,4 +1,4 @@
-#include "test_clear_color.h"
+#include "test_texture.h"
 #include "../../include/glad/glad.h"
 #include "../debug.h"
 #include "../index_buffer.h"
@@ -154,7 +154,7 @@ static void on_free(void *test) {
   free(test);
 }
 
-Test *test_clear_color_init() {
+Test *test_texture_init() {
   Test *test = malloc(sizeof(Test));
 
   test->on_update = &on_update;
@@ -206,7 +206,7 @@ Test *test_clear_color_init() {
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});
 
   // glClearError();
-  obj->texture = texture_create("resources/textures/square.png");
+  obj->texture = texture_create("resources/textures/opengl.png");
   // glCheckError();
   texture_bind(obj->texture, 0);
   // glClearError();

@@ -1,13 +1,8 @@
 #include "../include/glad/glad.h"
 #include "tests/test.h"
 #include "tests/test_clear_color.h"
+#include "tests/test_texture.h"
 #include <GLFW/glfw3.h>
-// #include <cglm/affine-mat.h>
-// #include <cglm/affine-pre.h>
-// #include <cglm/cam.h>
-// #include <cglm/mat4.h>
-// #include <cglm/types.h>
-// #include <cglm/vec3.h>
 #include <stdio.h>
 
 //----------------------nk-------------------------
@@ -37,13 +32,6 @@
 #include <time.h>
 
 #include "debug.h"
-#include "index_buffer.h"
-#include "renderer.h"
-#include "shader.h"
-#include "texture.h"
-#include "vertex_array.h"
-#include "vertex_buffer.h"
-#include "vertex_buffer_layout.h"
 
 // Function to handle key events
 void key_callback(GLFWwindow *window, int key, int scancode, int action,
@@ -107,73 +95,26 @@ int main(void) {
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
-  Shader *shader = shader_create("resources/shaders/basic.glsl");
-  shader_bind(shader);
-
-  float vertices[] = {-50.0f, -50.0f, 0.0f,  0.0f,  0.0f,  50.0f, -50.0f,
-                      0.0f,   1.0f,   0.0f,  50.0f, 50.0f, 0.0f,  1.0f,
-                      1.0f,   -50.0f, 50.0f, 0.0f,  0.0f,  1.0f};
-
-  unsigned int indices[] = {
-      0, 1, 3, // first triangle
-      1, 2, 3  // second triangle
-  };
-
-  // Create and bind a Vertex Array Object
-  VertexArray *va = vertex_array_create();
-
-  // Create and bind a Vertex Buffer Object
-  VertexBuffer *vb = vertex_buffer_create(vertices, sizeof(vertices));
-
-  VertexBufferLayout *layout = vertex_buffer_layout_create();
-  vertex_buffer_layout_push_float(layout, 3);
-  vertex_buffer_layout_push_float(layout, 2);
-  vertex_array_add_buffer(va, vb, layout);
-  // glCheckError();
-
-  // Create and bind a Index Buffer Object
-  IndexBuffer *ib = index_buffer_create(indices, 6);
-
-  mat4 proj;
-  glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -1.0f, 1.0f, proj);
-
-  mat4 view;
-  glm_mat4_identity(view);
-  glm_translate(view, (vec3){0.0f, 0.0f, 0.0f});
-
-  // glClearError();
-  Texture *texture = texture_create("resources/textures/square.png");
-  // glCheckError();
-  texture_bind(texture, 0);
-  // glClearError();
-  shader_uniform_set_1i(shader, "u_Texture", 0);
-  // glCheckError();
-
-  // Unbind the VBO and VAO
-  vertex_array_unbind();
-  vertex_buffer_unbind();
-  index_buffer_unbind();
-
-  float r = 0.0f;
-  float r_inc = 0.002f;
-
-  Renderer *renderer = renderer_create();
-
   Test *test = test_clear_color_init();
+  // Test *test = test_texture_init();
 
   struct timespec last_time, current_time;
   double delta_time = 0;
   double fps = 0;
+  float r = 0.0f;
+  float r_inc = 0.002f;
 
-  static float value_x = 0.0f;
-  static float value_y = 0.0f;
-  static float value_z = 0.0f;
+  static const char *test_options[] = {
+      "Clear Color", "Texture"};      // The options we want to display
+  static int selected_test_index = 0; // Selected item index
+  int previous_selected = 0;
 
   // Initialize lastTime using CLOCK_MONOTONIC
   clock_gettime(CLOCK_MONOTONIC, &last_time);
+
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
-    // // Get the current time using CLOCK_MONOTONIC
+    // Get the current time using CLOCK_MONOTONIC
     clock_gettime(CLOCK_MONOTONIC, &current_time);
 
     // Calculate delta time in seconds
@@ -195,47 +136,6 @@ int main(void) {
 
     test_on_render(test);
 
-    // Use our shader program
-    shader_bind(shader);
-
-    texture_bind(texture, 0);
-
-    // shader_uniform_set_4f(shader, "u_Color", r, 0.3f, 0.8f, 1.0f);
-
-    {
-      mat4 model;
-      // glm_mat4_identity(model);
-      glm_translate_make(model, (vec3){value_x, value_y, value_z});
-
-      mat4 mvp;
-      glm_mat4_mul(proj, view, mvp);
-      glm_mat4_mul(mvp, model, mvp);
-
-      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
-
-      renderer_draw(renderer, va, ib, shader);
-    }
-
-    {
-      mat4 model;
-      // glm_mat4_identity(model);
-      glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
-      glm_translate(model, (vec3){value_x * 2, value_y * 2, value_z});
-
-      mat4 mvp;
-      glm_mat4_mul(proj, view, mvp);
-      glm_mat4_mul(mvp, model, mvp);
-
-      shader_uniform_set_mat4f(shader, "u_MVP", mvp);
-
-      renderer_draw(renderer, va, ib, shader);
-    }
-    // glClearError();
-    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
-    // glCheckError();
-
-    vertex_array_unbind();
-
     // Display the framerate (for debugging)
     // printf("FPS: %.2f\n", fps);
 
@@ -243,11 +143,6 @@ int main(void) {
     // create a new frame for every iteration of the loop
     // here we set up the nk_window
     nk_glfw3_new_frame();
-
-
-    enum { EASY, HARD };
-    static int op = EASY;
-    static int i = 20;
 
     if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
                  NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
@@ -263,73 +158,32 @@ int main(void) {
       }
       nk_layout_row_end(context);
 
-      /* fixed widget pixel width */
-      nk_layout_row_static(context, 30, 80, 1);
-      if (nk_button_label(context, "button")) {
-        /* event handling */
-        printf("Button\n");
-      }
-
-      /* fixed widget window ratio width */
-      nk_layout_row_dynamic(context, 30, 2);
-      if (nk_option_label(context, "easy", op == EASY))
-        op = EASY;
-      if (nk_option_label(context, "hard", op == HARD))
-        op = HARD;
-
-      /* custom widget pixel width */
-      nk_layout_row_begin(context, NK_STATIC, 30, 3);
-      {
-        nk_layout_row_push(context, 20);
-        nk_label(context, "X:", NK_TEXT_LEFT);
-        nk_layout_row_push(context, 30);
-        char val[10];
-        gcvt(value_x, 9, val);
-        nk_label(context, val, NK_TEXT_LEFT);
-        nk_layout_row_push(context, 110);
-        nk_slider_float(context, -100.0f, &value_x, 100.0f, 1.0f);
-      }
-      nk_layout_row_end(context);
-
-      /* custom widget pixel width */
-      nk_layout_row_begin(context, NK_STATIC, 30, 3);
-      {
-        nk_layout_row_push(context, 20);
-        nk_label(context, "Y:", NK_TEXT_LEFT);
-        nk_layout_row_push(context, 30);
-        char val[10];
-        gcvt(value_y, 9, val);
-        nk_label(context, val, NK_TEXT_LEFT);
-        nk_layout_row_push(context, 110);
-        nk_slider_float(context, -100.0f, &value_y, 100.0f, 1.0f);
-      }
-      nk_layout_row_end(context);
-
-      /* custom widget pixel width */
-      nk_layout_row_begin(context, NK_STATIC, 30, 3);
-      {
-        nk_layout_row_push(context, 20);
-        nk_label(context, "Z:", NK_TEXT_LEFT);
-        nk_layout_row_push(context, 30);
-        char val[10];
-        gcvt(value_z, 9, val);
-        nk_label(context, val, NK_TEXT_LEFT);
-        nk_layout_row_push(context, 110);
-        nk_slider_float(context, -100.0f, &value_z, 100.0f, 1.0f);
-      }
-      nk_layout_row_end(context);
+      nk_layout_row_dynamic(context, 30, 1);
+      nk_combobox(context, test_options, 2, &selected_test_index, 20,
+                  (struct nk_vec2){200, 100});
 
       test_on_ui_render(test, context);
     }
     nk_end(context);
     //------------------------------------------------------------
-    // printf("%f\n", value);
 
-    // float *color_obj = (float *)(test->obj);
-    // color_obj[0] = clear_color.r;
-    // color_obj[1] = clear_color.g;
-    // color_obj[2] = clear_color.b;
-    // color_obj[3] = clear_color.a;
+    if (selected_test_index != previous_selected) {
+      switch (selected_test_index) {
+      case 0:
+        test_on_free(test);
+        test = test_clear_color_init();
+        break;
+      case 1:
+        test_on_free(test);
+        test = test_texture_init();
+        break;
+      default:
+        printf("Unknown selected item");
+        break;
+      }
+
+      previous_selected = selected_test_index;
+    }
 
     r += r_inc;
     if (r > 1) {
@@ -351,14 +205,7 @@ int main(void) {
   }
 
   // Clean up
-  vertex_array_free(va);
-  vertex_buffer_free(vb);
-  index_buffer_free(ib);
-  vertex_buffer_layout_free(layout);
 
-  shader_free(shader);
-  renderer_free(renderer);
-  texture_free(texture);
   test_on_free(test);
 
   //-------------------------nk------------------------------------
