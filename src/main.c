@@ -1,6 +1,7 @@
 #include "../include/glad/glad.h"
 #include "tests/test.h"
 #include "tests/test_clear_color.h"
+#include "tests/test_empty.h"
 #include "tests/test_texture.h"
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -105,7 +106,7 @@ int main(void) {
   float r_inc = 0.002f;
 
   static const char *test_options[] = {
-      "Clear Color", "Texture"};      // The options we want to display
+      "Clear Color", "Texture", "Empty"};      // The options we want to display
   static int selected_test_index = 0; // Selected item index
   int previous_selected = 0;
 
@@ -159,7 +160,7 @@ int main(void) {
       nk_layout_row_end(context);
 
       nk_layout_row_dynamic(context, 30, 1);
-      nk_combobox(context, test_options, 2, &selected_test_index, 20,
+      nk_combobox(context, test_options, sizeof(test_options) / sizeof(char *), &selected_test_index, 20,
                   (struct nk_vec2){200, 100});
 
       test_on_ui_render(test, context);
@@ -176,6 +177,10 @@ int main(void) {
       case 1:
         test_on_free(test);
         test = test_texture_init();
+        break;
+      case 2:
+        test_on_free(test);
+        test = test_empty_init();
         break;
       default:
         printf("Unknown selected item");
