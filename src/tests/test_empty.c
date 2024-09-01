@@ -21,29 +21,13 @@ static void on_update(void *obj, float delta_time) {
 }
 
 static void on_render(void *obj) {
-  // printf("Clear Color On Render\n");
-  // ClearColorObj *c_obj = (ClearColorObj *)obj;
-  // GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
-  //                     c_obj->clear_color.b, c_obj->clear_color.a));
-  GLCall(glClear(GL_COLOR_BUFFER_BIT));
+  ClearColorObj *c_obj = (ClearColorObj *)obj;
+  renderer_clear(c_obj->renderer);
+  // GLCall(glClear(GL_COLOR_BUFFER_BIT));
 }
 
 static void on_ui_render(void *obj, void *context) {
-  ClearColorObj *c_obj = (ClearColorObj *)obj;
-
-  // nk_layout_row_begin(context, NK_STATIC, 20, 1);
-  // {
-  //   nk_layout_row_push(context, 110);
-  //   nk_label(context, "Clear Color:", NK_TEXT_LEFT);
-  // }
-  // nk_layout_row_end(context);
-  //
-  // nk_layout_row_begin(context, NK_STATIC, 90, 1);
-  // {
-  //   nk_layout_row_push(context, 150);
-  //   c_obj->clear_color = nk_color_picker(context, c_obj->clear_color, NK_RGBA);
-  // }
-  // nk_layout_row_end(context);
+  // ClearColorObj *c_obj = (ClearColorObj *)obj;
 }
 
 static void on_free(void *test) {
@@ -68,6 +52,8 @@ Test *test_empty_init() {
   test->obj = obj;
 
   obj->renderer = renderer_create();
+
+  renderer_set_clear_color(obj->renderer, (float[]){0.2f, 0.3f, 0.3f, 1.0f});
 
   printf("Clear Color Init\n");
 

@@ -34,6 +34,11 @@
 
 #include "debug.h"
 
+typedef struct {
+  const char *name;
+  Test *(*init_function)();
+} TestPair;
+
 // Function to handle key events
 void key_callback(GLFWwindow *window, int key, int scancode, int action,
                   int mods) {
@@ -96,7 +101,6 @@ int main(void) {
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
-  Test *test = test_clear_color_init();
   // Test *test = test_texture_init();
 
   struct timespec last_time, current_time;
@@ -105,8 +109,24 @@ int main(void) {
   float r = 0.0f;
   float r_inc = 0.002f;
 
-  static const char *test_options[] = {
-      "Clear Color", "Texture", "Empty"};      // The options we want to display
+  TestPair test_pairs[] = {
+      {"Empty", &test_empty_init},
+      {"Clear Color", &test_clear_color_init},
+      {"Texture", &test_texture_init},
+  };
+
+  Test *test = test_pairs[0].init_function();
+
+  int number_of_tests = sizeof(test_pairs) / sizeof(TestPair);
+
+  const char *test_options[number_of_tests];
+  for (int i = 0; i < number_of_tests; i++) {
+    test_options[i] = test_pairs[i].name;
+  }
+
+  // const char *test_options[] = {
+  //     "Clear Color", "Texture", "Empty"};      // The options we want to
+  //     display
   static int selected_test_index = 0; // Selected item index
   int previous_selected = 0;
 
@@ -160,8 +180,8 @@ int main(void) {
       nk_layout_row_end(context);
 
       nk_layout_row_dynamic(context, 30, 1);
-      nk_combobox(context, test_options, sizeof(test_options) / sizeof(char *), &selected_test_index, 20,
-                  (struct nk_vec2){200, 100});
+      nk_combobox(context, test_options, number_of_tests, &selected_test_index,
+                  20, (struct nk_vec2){200, 100});
 
       test_on_ui_render(test, context);
     }
@@ -169,24 +189,8 @@ int main(void) {
     //------------------------------------------------------------
 
     if (selected_test_index != previous_selected) {
-      switch (selected_test_index) {
-      case 0:
-        test_on_free(test);
-        test = test_clear_color_init();
-        break;
-      case 1:
-        test_on_free(test);
-        test = test_texture_init();
-        break;
-      case 2:
-        test_on_free(test);
-        test = test_empty_init();
-        break;
-      default:
-        printf("Unknown selected item");
-        break;
-      }
-
+      test_on_free(test);
+      test = test_pairs[selected_test_index].init_function();
       previous_selected = selected_test_index;
     }
 

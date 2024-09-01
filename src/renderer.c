@@ -2,8 +2,8 @@
 #include <stdlib.h>
 
 #include "../include/glad/glad.h"
-#include "index_buffer.h"
 #include "debug.h"
+#include "index_buffer.h"
 
 Renderer *renderer_create() {
   Renderer *renderer = malloc(sizeof(Renderer));
@@ -13,7 +13,14 @@ Renderer *renderer_create() {
 
 void renderer_free(Renderer *renderer) { free(renderer); }
 
-void renderer_clear(Renderer *renderer) { GLCall(glClear(GL_COLOR_BUFFER_BIT)); }
+void renderer_clear(Renderer *renderer) {
+  GLCall(glClear(GL_COLOR_BUFFER_BIT));
+}
+
+void renderer_set_clear_color(Renderer *renderer, float *rgba_values) {
+  GLCall(glClearColor(rgba_values[0], rgba_values[1], rgba_values[2],
+                      rgba_values[3]));
+}
 
 void renderer_draw(Renderer *renderer, VertexArray *va, IndexBuffer *ib,
                    Shader *shader) {

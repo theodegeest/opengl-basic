@@ -1,11 +1,7 @@
 #include "test_clear_color.h"
 #include "../../include/glad/glad.h"
 #include "../debug.h"
-#include "../index_buffer.h"
 #include "../renderer.h"
-#include "../shader.h"
-#include "../texture.h"
-#include "../vertex_array.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,9 +20,11 @@ static void on_update(void *obj, float delta_time) {
 static void on_render(void *obj) {
   // printf("Clear Color On Render\n");
   ClearColorObj *c_obj = (ClearColorObj *)obj;
-  GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
-                      c_obj->clear_color.b, c_obj->clear_color.a));
-  GLCall(glClear(GL_COLOR_BUFFER_BIT));
+  renderer_set_clear_color(c_obj->renderer, &c_obj->clear_color.r);
+  // GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
+  //                     c_obj->clear_color.b, c_obj->clear_color.a));
+  // GLCall(glClear(GL_COLOR_BUFFER_BIT));
+  renderer_clear(c_obj->renderer);
 }
 
 static void on_ui_render(void *obj, void *context) {

@@ -13,7 +13,6 @@
 #include "../../include/Nuklear/nuklear.h"
 
 typedef struct {
-  struct nk_colorf clear_color;
   VertexArray *va;
   VertexBuffer *vb;
   IndexBuffer *ib;
@@ -35,9 +34,10 @@ static void on_update(void *obj, float delta_time) {
 static void on_render(void *obj) {
   // printf("Clear Color On Render\n");
   ClearColorObj *c_obj = (ClearColorObj *)obj;
-  GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
-                      c_obj->clear_color.b, c_obj->clear_color.a));
-  GLCall(glClear(GL_COLOR_BUFFER_BIT));
+  // GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
+  //                     c_obj->clear_color.b, c_obj->clear_color.a));
+  // GLCall(glClear(GL_COLOR_BUFFER_BIT));
+  renderer_clear(c_obj->renderer);
 
   // Use our shader program
   shader_bind(c_obj->shader);
@@ -128,14 +128,14 @@ static void on_ui_render(void *obj, void *context) {
   }
   nk_layout_row_end(context);
 
-  nk_layout_row_push(context, 110);
-  nk_label(context, "Clear Color:", NK_TEXT_LEFT);
-  nk_layout_row_begin(context, NK_STATIC, 90, 1);
-  {
-    nk_layout_row_push(context, 150);
-    c_obj->clear_color =
-        nk_color_picker(context, c_obj->clear_color, NK_RGBA);
-  }
+  // nk_layout_row_push(context, 110);
+  // nk_label(context, "Clear Color:", NK_TEXT_LEFT);
+  // nk_layout_row_begin(context, NK_STATIC, 90, 1);
+  // {
+  //   nk_layout_row_push(context, 150);
+  //   c_obj->clear_color =
+  //       nk_color_picker(context, c_obj->clear_color, NK_RGBA);
+  // }
 }
 
 static void on_free(void *test) {
@@ -165,13 +165,15 @@ Test *test_texture_init() {
   ClearColorObj *obj = malloc(sizeof(ClearColorObj));
   test->obj = obj;
 
-  obj->clear_color = (struct nk_colorf){0.2f, 0.3f, 0.3f, 1.0f};
+  // obj->clear_color = (struct nk_colorf){0.2f, 0.3f, 0.3f, 1.0f};
 
   obj->value_x = 0.0f;
   obj->value_y = 0.0f;
   obj->value_z = 0.0f;
 
   obj->renderer = renderer_create();
+
+  renderer_set_clear_color(obj->renderer, (float[]){0.2f, 0.3f, 0.3f, 1.0f});
 
   obj->shader = shader_create("resources/shaders/basic.glsl");
   shader_bind(obj->shader);
