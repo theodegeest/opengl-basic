@@ -206,8 +206,8 @@ int main(void) {
         nk_layout_row_push(context, 30);
         nk_label(context, "fps:", NK_TEXT_LEFT);
         nk_layout_row_push(context, 50);
-        char string_fps[7];
-        gcvt(fps, 6, string_fps);
+        char string_fps[11];
+        gcvt(fps, 8, string_fps);
         nk_label(context, string_fps, NK_TEXT_LEFT);
       }
       nk_layout_row_end(context);
@@ -289,12 +289,12 @@ int main(void) {
 
     {
       mat4 model;
-      glm_mat4_identity(model);
-      glm_translate(model, (vec3){value_x, value_y, value_z});
+      // glm_mat4_identity(model);
+      glm_translate_make(model, (vec3){value_x, value_y, value_z});
 
       mat4 mvp;
-      glm_mul(proj, view, mvp);
-      glm_mul(mvp, model, mvp);
+      glm_mat4_mul(proj, view, mvp);
+      glm_mat4_mul(mvp, model, mvp);
 
       shader_uniform_set_mat4f(shader, "u_MVP", mvp);
 
@@ -303,13 +303,13 @@ int main(void) {
 
     {
       mat4 model;
-      glm_mat4_identity(model);
-      glm_translate(model, (vec3){300.0f, 100.0f, 0.0f});
+      // glm_mat4_identity(model);
+      glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
       glm_translate(model, (vec3){value_x * 2, value_y * 2, value_z});
 
       mat4 mvp;
-      glm_mul(proj, view, mvp);
-      glm_mul(mvp, model, mvp);
+      glm_mat4_mul(proj, view, mvp);
+      glm_mat4_mul(mvp, model, mvp);
 
       shader_uniform_set_mat4f(shader, "u_MVP", mvp);
 
