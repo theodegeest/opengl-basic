@@ -10,13 +10,12 @@
 #include <stdio.h>
 
 #include <cglm/cglm.h>
-#include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #include "./graphics/debug.h"
-#include "./graphics/ui.h"
 #include "./graphics/graphics.h"
+#include "./graphics/ui.h"
+#include "utils/timer.h"
 
 typedef struct {
   const char *name;
@@ -34,22 +33,15 @@ static void on_ui_function(struct nk_context *context, void *args) {
   struct ui_args *args_obj = (struct ui_args *)args;
 
   nk_layout_row_dynamic(context, 30, 1);
-  nk_combobox(context, args_obj->scene_options, args_obj->number_of_scenes, args_obj->selected_scene_index, 20,
-              (struct nk_vec2){200, 100});
+  nk_combobox(context, args_obj->scene_options, args_obj->number_of_scenes,
+              args_obj->selected_scene_index, 20, (struct nk_vec2){200, 100});
 
   scene_on_ui_render(args_obj->scene, context);
 }
 
-
 int main(void) {
   GLFWwindow *window = graphics_init(0);
   UI ui = ui_init(window);
-
-  struct timespec last_time, current_time;
-  double delta_time = 0;
-  double fps = 0;
-  float r = 0.0f;
-  float r_inc = 0.002f;
 
   ScenePair scene_pairs[] = {
       {"Empty", &scene_empty_init},
@@ -72,36 +64,34 @@ int main(void) {
     scene_options[i] = scene_pairs[i].name;
   }
 
+  Timer *frame_time = timer_init();
+  Timer *update_time = timer_init();
+  Timer *scene_render_time = timer_init();
+  Timer *ui_render_time = timer_init();
 
-  // Initialize lastTime using CLOCK_MONOTONIC
-  clock_gettime(CLOCK_MONOTONIC, &last_time);
+  struct timespec last_time, current_time;
+  double delta_time = 0;
 
   // Rendering loop
   while (!glfwWindowShouldClose(window)) {
-    // Get the current time using CLOCK_MONOTONIC
     clock_gettime(CLOCK_MONOTONIC, &current_time);
 
-    // Calculate delta time in seconds
     delta_time = (current_time.tv_sec - last_time.tv_sec) +
-                 (current_time.tv_nsec - last_time.tv_nsec) / 1000000000.0;
-
-    // Update lastTime for the next loop iteration
+                 (current_time.tv_nsec - last_time.tv_nsec) / 1000000.0;
     last_time = current_time;
 
-    // Calculate the framerate
-    if (delta_time > 0) {
-      fps = 1.0 / delta_time;
-    }
+    timer_start(frame_time);
 
+    timer_start(update_time);
     scene_on_update(scene, delta_time);
+    timer_stop(update_time);
 
     GLCall(glEnable(GL_BLEND));
     GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
+    timer_start(scene_render_time);
     scene_on_render(scene);
-
-    // Display the framerate (for debugging)
-    // printf("FPS: %.2f\n", fps);
+    timer_stop(scene_render_time);
 
     struct ui_args args;
     args.scene_options = scene_options;
@@ -109,7 +99,8 @@ int main(void) {
     args.selected_scene_index = &selected_scene_index;
     args.scene = scene;
 
-    ui_draw_gui(ui, scene, fps, &on_ui_function, &args);
+    timer_start(ui_render_time);
+    ui_draw_gui(ui, scene, &on_ui_function, &args);
 
     if (selected_scene_index != previous_selected) {
       scene_on_free(scene);
@@ -117,21 +108,24 @@ int main(void) {
       previous_selected = selected_scene_index;
     }
 
-    r += r_inc;
-    if (r > 1) {
-      r = 0.0f;
-    }
-    // Clear the screen
-    // glClear(GL_COLOR_BUFFER_BIT);
-    // renderer_clear(renderer);
-
     ui_render(ui);
+    timer_stop(ui_render_time);
     // Swap front and back buffers
     glfwSwapBuffers(window);
 
     // Poll for and process events
     glfwPollEvents();
+
+    ui.perf_values.fps = 1.0 / (timer_stop(frame_time) / 1000);
+    ui.perf_values.frame_time = timer_elapsed(frame_time);
+    ui.perf_values.update_time = timer_elapsed(update_time);
+    ui.perf_values.scene_render_time = timer_elapsed(scene_render_time);
+    ui.perf_values.ui_render_time = timer_elapsed(ui_render_time);
   }
+
+  timer_free(frame_time);
+  timer_free(update_time);
+  timer_free(scene_render_time);
 
   // Clean up
 

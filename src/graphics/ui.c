@@ -36,10 +36,13 @@ UI ui_init(GLFWwindow *window) {
   nk_glfw3_font_stash_end();
   //----------------------------------------------------------
 
-  return (UI){context};
+  UI ui;
+  ui.context = context;
+
+  return ui;
 }
 
-void ui_draw_gui(UI ui, Scene *scene, float fps,
+void ui_draw_gui(UI ui, Scene *scene,
                  void(on_ui_function)(struct nk_context *context, void *args),
                  void *args) {
   struct nk_context *context = ui.context;
@@ -51,16 +54,28 @@ void ui_draw_gui(UI ui, Scene *scene, float fps,
   if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
                NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
                    NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE)) {
-    nk_layout_row_begin(context, NK_STATIC, 30, 2);
-    {
-      nk_layout_row_push(context, 30);
-      nk_label(context, "fps:", NK_TEXT_LEFT);
-      nk_layout_row_push(context, 50);
-      char string_fps[11];
-      gcvt(fps, 8, string_fps);
-      nk_label(context, string_fps, NK_TEXT_LEFT);
-    }
-    nk_layout_row_end(context);
+    nk_layout_row_static(context, 15, 110, 2);
+    char string[20];
+
+    nk_label(context, "fps:", NK_TEXT_LEFT);
+    gcvt(ui.perf_values.fps, 8, string);
+    nk_label(context, string, NK_TEXT_LEFT);
+
+    nk_label(context, "ms/frame:", NK_TEXT_LEFT);
+    gcvt(ui.perf_values.frame_time, 8, string);
+    nk_label(context, string, NK_TEXT_LEFT);
+
+    nk_label(context, "update time:", NK_TEXT_LEFT);
+    gcvt(ui.perf_values.update_time, 8, string);
+    nk_label(context, string, NK_TEXT_LEFT);
+
+    nk_label(context, "render time:", NK_TEXT_LEFT);
+    gcvt(ui.perf_values.scene_render_time, 8, string);
+    nk_label(context, string, NK_TEXT_LEFT);
+
+    nk_label(context, "ui render time:", NK_TEXT_LEFT);
+    gcvt(ui.perf_values.ui_render_time, 8, string);
+    nk_label(context, string, NK_TEXT_LEFT);
 
     on_ui_function(context, args);
   }
