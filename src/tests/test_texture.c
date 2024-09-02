@@ -35,7 +35,7 @@ static void on_update(void *obj, float delta_time) {
   vertex_buffer_clear(c_obj->vb);
 
   Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-  Quad right_quad = quad_create(300.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  Quad right_quad = quad_create(250.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
   vertex_buffer_push_quad(c_obj->vb, left_quad);

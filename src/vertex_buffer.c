@@ -5,6 +5,8 @@
 #include "../include/glad/glad.h"
 #include "debug.h"
 
+static unsigned int _check_boundaries(VertexBuffer *vb);
+
 /******************************************************************************
                               PUBLIC FUNCTIONS                                *
 *******************************************************************************/
@@ -72,7 +74,11 @@ void vertex_buffer_flush(VertexBuffer *vertexBuffer) {
 }
 
 void vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad quad) {
-  vertexBuffer->buffer[vertexBuffer->size++] = quad;
+  if (_check_boundaries(vertexBuffer)) {
+    vertexBuffer->buffer[vertexBuffer->size++] = quad;
+  } else {
+    printf("[VertexBuffer Error] Buffer is full, could not push new Quad.\n");
+  }
 }
 
 void vertex_buffer_bind(VertexBuffer *vertexBuffer) {
@@ -83,3 +89,12 @@ void vertex_buffer_unbind() { GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0)); }
 /******************************************************************************
                               PRIVATE FUNCTIONS                               *
 *******************************************************************************/
+
+// Returns 1 if new push is allowed, else it returns 0.
+static unsigned int _check_boundaries(VertexBuffer *vb) {
+  if (vb->size == BUFFER_MAX_CAPACITY) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
