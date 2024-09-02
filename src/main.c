@@ -1,11 +1,11 @@
 #include "../include/glad/glad.h"
-#include "tests/test.h"
-#include "tests/test_batch_rendering.h"
-#include "tests/test_clear_color.h"
-#include "tests/test_color.h"
-#include "tests/test_cube.h"
-#include "tests/test_empty.h"
-#include "tests/test_texture.h"
+#include "scenes/scene.h"
+#include "scenes/scene_batch_rendering.h"
+#include "scenes/scene_clear_color.h"
+#include "scenes/scene_color.h"
+#include "scenes/scene_cube.h"
+#include "scenes/scene_empty.h"
+#include "scenes/scene_texture.h"
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
@@ -19,8 +19,8 @@
 
 typedef struct {
   const char *name;
-  Test *(*init_function)();
-} TestPair;
+  Scene *(*init_function)();
+} ScenePair;
 
 // Function to handle key events
 void key_callback(GLFWwindow *window, int key, int scancode, int action,
@@ -30,20 +30,20 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 struct ui_args {
-  const char **test_options;
-  int number_of_tests;
-  int *selected_test_index;
-  Test *test;
+  const char **scene_options;
+  int number_of_scenes;
+  int *selected_scene_index;
+  Scene *scene;
 };
 
 static void on_ui_function(struct nk_context *context, void *args) {
   struct ui_args *args_obj = (struct ui_args *)args;
 
   nk_layout_row_dynamic(context, 30, 1);
-  nk_combobox(context, args_obj->test_options, args_obj->number_of_tests, args_obj->selected_test_index, 20,
+  nk_combobox(context, args_obj->scene_options, args_obj->number_of_scenes, args_obj->selected_scene_index, 20,
               (struct nk_vec2){200, 100});
 
-  test_on_ui_render(args_obj->test, context);
+  scene_on_ui_render(args_obj->scene, context);
 }
 
 int main(void) {
@@ -91,7 +91,7 @@ int main(void) {
   // Set the key callback
   glfwSetKeyCallback(window, key_callback);
 
-  // Test *test = test_texture_init();
+  // Scene *scene = scene_texture_init();
 
   struct timespec last_time, current_time;
   double delta_time = 0;
@@ -99,28 +99,28 @@ int main(void) {
   float r = 0.0f;
   float r_inc = 0.002f;
 
-  TestPair test_pairs[] = {
-      {"Empty", &test_empty_init},
-      {"Clear Color", &test_clear_color_init},
-      {"Color", &test_color_init},
-      {"Texture", &test_texture_init},
-      {"Batch Rendering", &test_batch_rendering_init},
-      {"Cube", &test_cube_init},
+  ScenePair scene_pairs[] = {
+      {"Empty", &scene_empty_init},
+      {"Clear Color", &scene_clear_color_init},
+      {"Color", &scene_color_init},
+      {"Texture", &scene_texture_init},
+      {"Batch Rendering", &scene_batch_rendering_init},
+      {"Cube", &scene_cube_init},
   };
 
-  Test *test = test_pairs[0].init_function();
+  Scene *scene = scene_pairs[0].init_function();
 
-  int number_of_tests = sizeof(test_pairs) / sizeof(TestPair);
+  int number_of_scenes = sizeof(scene_pairs) / sizeof(ScenePair);
 
-  const char *test_options[number_of_tests];
-  for (int i = 0; i < number_of_tests; i++) {
-    test_options[i] = test_pairs[i].name;
+  const char *scene_options[number_of_scenes];
+  for (int i = 0; i < number_of_scenes; i++) {
+    scene_options[i] = scene_pairs[i].name;
   }
 
-  // const char *test_options[] = {
+  // const char *scene_options[] = {
   //     "Clear Color", "Texture", "Empty"};      // The options we want to
   //     display
-  static int selected_test_index = 0; // Selected item index
+  static int selected_scene_index = 0; // Selected item index
   int previous_selected = 0;
 
   // Initialize lastTime using CLOCK_MONOTONIC
@@ -143,28 +143,28 @@ int main(void) {
       fps = 1.0 / delta_time;
     }
 
-    test_on_update(test, delta_time);
+    scene_on_update(scene, delta_time);
 
     GLCall(glEnable(GL_BLEND));
     GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-    test_on_render(test);
+    scene_on_render(scene);
 
     // Display the framerate (for debugging)
     // printf("FPS: %.2f\n", fps);
 
     struct ui_args args;
-    args.test_options = test_options;
-    args.number_of_tests = number_of_tests;
-    args.selected_test_index = &selected_test_index;
-    args.test = test;
+    args.scene_options = scene_options;
+    args.number_of_scenes = number_of_scenes;
+    args.selected_scene_index = &selected_scene_index;
+    args.scene = scene;
 
-    ui_draw_gui(ui, test, fps, &on_ui_function, &args);
+    ui_draw_gui(ui, scene, fps, &on_ui_function, &args);
 
-    if (selected_test_index != previous_selected) {
-      test_on_free(test);
-      test = test_pairs[selected_test_index].init_function();
-      previous_selected = selected_test_index;
+    if (selected_scene_index != previous_selected) {
+      scene_on_free(scene);
+      scene = scene_pairs[selected_scene_index].init_function();
+      previous_selected = selected_scene_index;
     }
 
     r += r_inc;
@@ -185,7 +185,7 @@ int main(void) {
 
   // Clean up
 
-  test_on_free(test);
+  scene_on_free(scene);
 
   ui_free(ui);
 

@@ -1,4 +1,4 @@
-#include "test_empty.h"
+#include "scene_empty.h"
 #include "../../include/glad/glad.h"
 #include "../graphics/renderer.h"
 #include <cglm/cglm.h>
@@ -25,26 +25,26 @@ static void on_ui_render(void *obj, void *context) {
   // ClearColorObj *c_obj = (ClearColorObj *)obj;
 }
 
-static void on_free(void *test) {
+static void on_free(void *scene) {
   printf("Clear Color On Free\n");
-  Test *test_p = (Test *)test;
-  ClearColorObj *obj = (ClearColorObj *)test_p->obj;
+  Scene *scene_p = (Scene *)scene;
+  ClearColorObj *obj = (ClearColorObj *)scene_p->obj;
 
   renderer_free(obj->renderer);
   free(obj);
-  free(test);
+  free(scene);
 }
 
-Test *test_empty_init() {
-  Test *test = malloc(sizeof(Test));
+Scene *scene_empty_init() {
+  Scene *scene = malloc(sizeof(Scene));
 
-  test->on_update = &on_update;
-  test->on_render = &on_render;
-  test->on_ui_render = &on_ui_render;
-  test->on_free = &on_free;
+  scene->on_update = &on_update;
+  scene->on_render = &on_render;
+  scene->on_ui_render = &on_ui_render;
+  scene->on_free = &on_free;
 
   ClearColorObj *obj = malloc(sizeof(ClearColorObj));
-  test->obj = obj;
+  scene->obj = obj;
 
   obj->renderer = renderer_create();
 
@@ -52,5 +52,5 @@ Test *test_empty_init() {
 
   printf("Clear Color Init\n");
 
-  return test;
+  return scene;
 }

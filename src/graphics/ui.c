@@ -39,7 +39,7 @@ UI ui_init(GLFWwindow *window) {
   return (UI){context};
 }
 
-void ui_draw_gui(UI ui, Test *test, float fps,
+void ui_draw_gui(UI ui, Scene *scene, float fps,
                  void(on_ui_function)(struct nk_context *context, void *args),
                  void *args) {
   struct nk_context *context = ui.context;

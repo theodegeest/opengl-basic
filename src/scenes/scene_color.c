@@ -1,4 +1,4 @@
-#include "test_color.h"
+#include "scene_color.h"
 #include "../../include/glad/glad.h"
 #include "../graphics/index_buffer.h"
 #include "../graphics/renderer.h"
@@ -98,10 +98,10 @@ static void on_ui_render(void *obj, void *context) {
   nk_layout_row_end(context);
 }
 
-static void on_free(void *test) {
+static void on_free(void *scene) {
   printf("Clear Color On Free\n");
-  Test *test_p = (Test *)test;
-  ColorObj *obj = (ColorObj *)test_p->obj;
+  Scene *scene_p = (Scene *)scene;
+  ColorObj *obj = (ColorObj *)scene_p->obj;
 
   vertex_array_free(obj->va);
   vertex_buffer_free(obj->vb);
@@ -110,19 +110,19 @@ static void on_free(void *test) {
   shader_free(obj->shader);
   renderer_free(obj->renderer);
   free(obj);
-  free(test);
+  free(scene);
 }
 
-Test *test_color_init() {
-  Test *test = malloc(sizeof(Test));
+Scene *scene_color_init() {
+  Scene *scene = malloc(sizeof(Scene));
 
-  test->on_update = &on_update;
-  test->on_render = &on_render;
-  test->on_ui_render = &on_ui_render;
-  test->on_free = &on_free;
+  scene->on_update = &on_update;
+  scene->on_render = &on_render;
+  scene->on_ui_render = &on_ui_render;
+  scene->on_free = &on_free;
 
   ColorObj *obj = malloc(sizeof(ColorObj));
-  test->obj = obj;
+  scene->obj = obj;
 
   obj->color = (struct nk_colorf){1.0f, 0.0f, 0.0f, 1.0f};
 
@@ -162,5 +162,5 @@ Test *test_color_init() {
 
   printf("Clear Color Init\n");
 
-  return test;
+  return scene;
 }

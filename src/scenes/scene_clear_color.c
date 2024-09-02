@@ -1,4 +1,4 @@
-#include "test_clear_color.h"
+#include "scene_clear_color.h"
 #include "../../include/glad/glad.h"
 #include "../graphics/renderer.h"
 #include <cglm/cglm.h>
@@ -41,26 +41,26 @@ static void on_ui_render(void *obj, void *context) {
   nk_layout_row_end(context);
 }
 
-static void on_free(void *test) {
+static void on_free(void *scene) {
   printf("Clear Color On Free\n");
-  Test *test_p = (Test *)test;
-  BatchRenderingObj *obj = (BatchRenderingObj *)test_p->obj;
+  Scene *scene_p = (Scene *)scene;
+  BatchRenderingObj *obj = (BatchRenderingObj *)scene_p->obj;
 
   renderer_free(obj->renderer);
   free(obj);
-  free(test);
+  free(scene);
 }
 
-Test *test_clear_color_init() {
-  Test *test = malloc(sizeof(Test));
+Scene *scene_clear_color_init() {
+  Scene *scene = malloc(sizeof(Scene));
 
-  test->on_update = &on_update;
-  test->on_render = &on_render;
-  test->on_ui_render = &on_ui_render;
-  test->on_free = &on_free;
+  scene->on_update = &on_update;
+  scene->on_render = &on_render;
+  scene->on_ui_render = &on_ui_render;
+  scene->on_free = &on_free;
 
   BatchRenderingObj *obj = malloc(sizeof(BatchRenderingObj));
-  test->obj = obj;
+  scene->obj = obj;
 
   obj->clear_color = (struct nk_colorf){0.2f, 0.3f, 0.3f, 1.0f};
 
@@ -68,5 +68,5 @@ Test *test_clear_color_init() {
 
   printf("Clear Color Init\n");
 
-  return test;
+  return scene;
 }
