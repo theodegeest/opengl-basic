@@ -40,7 +40,7 @@ IndexBuffer *index_buffer_create_quad() {
 
   GLCall(glGenBuffers(1, &ib->id));
   GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->id));
-  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_INDEX_BUFFER_CAPACITY * sizeof(unsigned int), indices,
+  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_INDEX_BUFFER_CAPACITY * sizeof(unsigned int) * 6, indices,
                GL_STATIC_DRAW));
 
   ib->count = MAX_INDEX_BUFFER_CAPACITY;

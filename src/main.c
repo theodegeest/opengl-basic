@@ -1,5 +1,6 @@
 #include "../include/glad/glad.h"
 #include "tests/test.h"
+#include "tests/test_batch_rendering.h"
 #include "tests/test_clear_color.h"
 #include "tests/test_empty.h"
 #include "tests/test_texture.h"
@@ -113,6 +114,7 @@ int main(void) {
       {"Empty", &test_empty_init},
       {"Clear Color", &test_clear_color_init},
       {"Texture", &test_texture_init},
+      {"Batch Rendering", &test_batch_rendering_init},
   };
 
   Test *test = test_pairs[0].init_function();

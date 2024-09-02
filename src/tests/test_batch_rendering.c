@@ -1,4 +1,3 @@
-#include "test_texture.h"
 #include "../../include/glad/glad.h"
 #include "../debug.h"
 #include "../index_buffer.h"
@@ -6,6 +5,7 @@
 #include "../shader.h"
 #include "../texture.h"
 #include "../vertex_array.h"
+#include "test_texture.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,76 +25,85 @@ typedef struct {
   float value_z;
   mat4 proj;
   mat4 view;
-} TextureObj;
+} BatchRenderingObj;
 
 static void on_update(void *obj, float delta_time) {
-  TextureObj *t_obj = (TextureObj *)obj;
+  BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
   // printf("Clear Color On Update\n");
 
   // Create Quads
-  vertex_buffer_clear(t_obj->vb);
+  vertex_buffer_clear(b_obj->vb);
 
-  Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f,
-                               (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-  Quad right_quad = quad_create(250.0f, 200.0f, 100.0f, 100.0f,
-                                (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  // Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f,
+  //                              (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  // Quad right_quad = quad_create(250.0f, 200.0f, 100.0f, 100.0f,
+  //                               (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
-  vertex_buffer_push_quad(t_obj->vb, left_quad);
-  vertex_buffer_push_quad(t_obj->vb, right_quad);
+  // vertex_buffer_push_quad(b_obj->vb, left_quad);
+  // vertex_buffer_push_quad(b_obj->vb, right_quad);
+  int size = 10;
 
-  // printf("%f\n", t_obj->vb->buffer[4].ld.pos.x);
-  // printf("%f\n", t_obj->vb->buffer[100].ld.pos.x);
+  for (int i = 0; i < 70; i++) {
+    for (int j = 0; j < 50; j++) {
+      Quad q = quad_create(50.0f + i * size, 50.0f + j * size, size, size,
+                           (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+      vertex_buffer_push_quad(b_obj->vb, q);
+    }
+  }
 
-  vertex_buffer_flush(t_obj->vb);
+  // printf("%f\n", c_obj->vb->buffer[4].ld.pos.x);
+  // printf("%f\n", c_obj->vb->buffer[100].ld.pos.x);
+
+  vertex_buffer_flush(b_obj->vb);
 }
 
 static void on_render(void *obj) {
   // printf("Clear Color On Render\n");
-  TextureObj *t_obj = (TextureObj *)obj;
-  renderer_clear(t_obj->renderer);
+  BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
+  renderer_clear(b_obj->renderer);
 
   // Use our shader program
-  shader_bind(t_obj->shader);
+  shader_bind(b_obj->shader);
 
-  texture_bind(t_obj->texture, 0);
+  texture_bind(b_obj->texture, 0);
 
   {
     mat4 model;
     glm_translate_make(model, (vec3){0.0f, 0.0f, 0.0f});
     glm_translate(model,
-                  (vec3){t_obj->value_x, t_obj->value_y, t_obj->value_z});
+                  (vec3){b_obj->value_x, b_obj->value_y, b_obj->value_z});
 
     mat4 mvp;
-    glm_mat4_mul(t_obj->proj, t_obj->view, mvp);
+    glm_mat4_mul(b_obj->proj, b_obj->view, mvp);
     glm_mat4_mul(mvp, model, mvp);
 
-    shader_uniform_set_mat4f(t_obj->shader, "u_MVP", mvp);
+    shader_uniform_set_mat4f(b_obj->shader, "u_MVP", mvp);
 
-    renderer_draw(t_obj->renderer, t_obj->va, t_obj->vb, t_obj->shader);
+    renderer_draw(b_obj->renderer, b_obj->va, b_obj->vb, b_obj->shader);
   }
 
   // {
   //   mat4 model;
   //   glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
   //   glm_translate(
-  //       model, (vec3){t_obj->value_x * 2, t_obj->value_y * 2,
-  //       t_obj->value_z});
+  //       model, (vec3){c_obj->value_x * 2, c_obj->value_y * 2,
+  //       c_obj->value_z});
   //
   //   mat4 mvp;
-  //   glm_mat4_mul(t_obj->proj, t_obj->view, mvp);
+  //   glm_mat4_mul(c_obj->proj, c_obj->view, mvp);
   //   glm_mat4_mul(mvp, model, mvp);
   //
-  //   shader_uniform_set_mat4f(t_obj->shader, "u_MVP", mvp);
+  //   shader_uniform_set_mat4f(c_obj->shader, "u_MVP", mvp);
   //
-  //   renderer_draw(t_obj->renderer, t_obj->va, t_obj->ib, t_obj->shader);
+  //   renderer_draw(c_obj->renderer, c_obj->va, c_obj->ib, c_obj->shader);
   // }
 
   vertex_array_unbind();
 }
 
 static void on_ui_render(void *obj, void *context) {
-  TextureObj *t_obj = (TextureObj *)obj;
+  BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
 
   /* custom widget pixel width */
   nk_layout_row_begin(context, NK_STATIC, 25, 3);
@@ -103,10 +112,10 @@ static void on_ui_render(void *obj, void *context) {
     nk_label(context, "X:", NK_TEXT_LEFT);
     nk_layout_row_push(context, 30);
     char val[10];
-    gcvt(t_obj->value_x, 9, val);
+    gcvt(b_obj->value_x, 9, val);
     nk_label(context, val, NK_TEXT_LEFT);
     nk_layout_row_push(context, 110);
-    nk_slider_float(context, -100.0f, &t_obj->value_x, 100.0f, 1.0f);
+    nk_slider_float(context, -100.0f, &b_obj->value_x, 100.0f, 1.0f);
   }
   nk_layout_row_end(context);
 
@@ -117,10 +126,10 @@ static void on_ui_render(void *obj, void *context) {
     nk_label(context, "Y:", NK_TEXT_LEFT);
     nk_layout_row_push(context, 30);
     char val[10];
-    gcvt(t_obj->value_y, 9, val);
+    gcvt(b_obj->value_y, 9, val);
     nk_label(context, val, NK_TEXT_LEFT);
     nk_layout_row_push(context, 110);
-    nk_slider_float(context, -100.0f, &t_obj->value_y, 100.0f, 1.0f);
+    nk_slider_float(context, -100.0f, &b_obj->value_y, 100.0f, 1.0f);
   }
   nk_layout_row_end(context);
 
@@ -131,10 +140,10 @@ static void on_ui_render(void *obj, void *context) {
     nk_label(context, "Z:", NK_TEXT_LEFT);
     nk_layout_row_push(context, 30);
     char val[10];
-    gcvt(t_obj->value_z, 9, val);
+    gcvt(b_obj->value_z, 9, val);
     nk_label(context, val, NK_TEXT_LEFT);
     nk_layout_row_push(context, 110);
-    nk_slider_float(context, -100.0f, &t_obj->value_z, 100.0f, 1.0f);
+    nk_slider_float(context, -100.0f, &b_obj->value_z, 100.0f, 1.0f);
   }
   nk_layout_row_end(context);
 }
@@ -142,7 +151,7 @@ static void on_ui_render(void *obj, void *context) {
 static void on_free(void *test) {
   printf("Clear Color On Free\n");
   Test *test_p = (Test *)test;
-  TextureObj *obj = (TextureObj *)test_p->obj;
+  BatchRenderingObj *obj = (BatchRenderingObj *)test_p->obj;
 
   vertex_array_free(obj->va);
   vertex_buffer_free(obj->vb);
@@ -155,7 +164,7 @@ static void on_free(void *test) {
   free(test);
 }
 
-Test *test_texture_init() {
+Test *test_batch_rendering_init() {
   Test *test = malloc(sizeof(Test));
 
   test->on_update = &on_update;
@@ -163,7 +172,7 @@ Test *test_texture_init() {
   test->on_ui_render = &on_ui_render;
   test->on_free = &on_free;
 
-  TextureObj *obj = malloc(sizeof(TextureObj));
+  BatchRenderingObj *obj = malloc(sizeof(BatchRenderingObj));
   test->obj = obj;
 
   obj->value_x = 0.0f;
@@ -199,7 +208,7 @@ Test *test_texture_init() {
   glm_mat4_identity(obj->view);
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});
 
-  obj->texture = texture_create("resources/textures/opengl.png");
+  obj->texture = texture_create("resources/textures/small-circle.png");
   texture_bind(obj->texture, 0);
 
   int samplers[2] = {0, 1};

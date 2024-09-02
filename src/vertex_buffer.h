@@ -3,7 +3,7 @@
 
 #include "mesh/quad.h"
 
-#define BUFFER_MAX_CAPACITY 1000
+#define BUFFER_MAX_CAPACITY 10000
 
 typedef struct {
   unsigned int id;
