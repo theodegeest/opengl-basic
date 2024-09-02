@@ -34,12 +34,23 @@ static void on_update(void *obj, float delta_time) {
   // Create Quads
   vertex_buffer_clear(c_obj->vb);
 
-  Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-  Quad right_quad = quad_create(250.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f,
+                               (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  Quad right_quad = quad_create(250.0f, 200.0f, 100.0f, 100.0f,
+                                (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
   vertex_buffer_push_quad(c_obj->vb, left_quad);
   vertex_buffer_push_quad(c_obj->vb, right_quad);
+
+  for (int i = 0; i < 900; i++) {
+    Quad q = quad_create(400.0f + i * 2, 200.0f, 100.0f, 100.0f,
+                         (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+    vertex_buffer_push_quad(c_obj->vb, q);
+  }
+
+  // printf("%f\n", c_obj->vb->buffer[4].ld.pos.x);
+  // printf("%f\n", c_obj->vb->buffer[100].ld.pos.x);
 
   vertex_buffer_flush(c_obj->vb);
 }
@@ -54,13 +65,11 @@ static void on_render(void *obj) {
 
   texture_bind(c_obj->texture, 0);
 
-
-
   {
     mat4 model;
     glm_translate_make(model, (vec3){0.0f, 0.0f, 0.0f});
     glm_translate(model,
-                       (vec3){c_obj->value_x, c_obj->value_y, c_obj->value_z});
+                  (vec3){c_obj->value_x, c_obj->value_y, c_obj->value_z});
 
     mat4 mvp;
     glm_mat4_mul(c_obj->proj, c_obj->view, mvp);
@@ -75,7 +84,8 @@ static void on_render(void *obj) {
   //   mat4 model;
   //   glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
   //   glm_translate(
-  //       model, (vec3){c_obj->value_x * 2, c_obj->value_y * 2, c_obj->value_z});
+  //       model, (vec3){c_obj->value_x * 2, c_obj->value_y * 2,
+  //       c_obj->value_z});
   //
   //   mat4 mvp;
   //   glm_mat4_mul(c_obj->proj, c_obj->view, mvp);
@@ -177,11 +187,8 @@ Test *test_texture_init() {
   //                     0.0f,   1.0f,   0.0f,  50.0f, 50.0f, 0.0f,  1.0f,
   //                     1.0f,   -50.0f, 50.0f, 0.0f,  0.0f,  1.0f};
 
-  unsigned int indices[] = {
-      0, 1, 2, 2, 3, 0,
-      4, 5, 6, 6, 7, 4,
-      8, 9, 10, 10, 11, 8
-  };
+  unsigned int indices[] = {0, 1, 2, 2, 3, 0,  4,  5,  6,
+                            6, 7, 4, 8, 9, 10, 10, 11, 8};
 
   // Create and bind a Vertex Array Object
   obj->va = vertex_array_create();
@@ -197,7 +204,8 @@ Test *test_texture_init() {
   vertex_array_add_buffer(obj->va, obj->vb, obj->layout);
 
   // Create and bind a Index Buffer Object
-  obj->ib = index_buffer_create(indices, 6 * 3);
+  // obj->ib = index_buffer_create(indices, 6 * 3);
+  obj->ib = index_buffer_create_quad();
 
   glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -1.0f, 1.0f, obj->proj);
 
