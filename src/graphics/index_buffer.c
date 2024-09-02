@@ -1,7 +1,7 @@
 #include "index_buffer.h"
 #include <stdlib.h>
 
-#include "../include/glad/glad.h"
+#include "../../include/glad/glad.h"
 #include "debug.h"
 
 /******************************************************************************

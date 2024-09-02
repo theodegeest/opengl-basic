@@ -150,7 +150,7 @@
 // }
 
 // #include "ui.h"
-#include "../include/glad/glad.h"
+#include "../../include/glad/glad.h"
 #include <GLFW/glfw3.h>
 
 //----------------------nk-------------------------
@@ -171,7 +171,7 @@
 // #include "../include/Nuklear/nuklear.h"
 #include "ui.h"
 //
-#include "../include/Nuklear/demo/glfw_opengl4/nuklear_glfw_gl4.h"
+#include "../../include/Nuklear/demo/glfw_opengl4/nuklear_glfw_gl4.h"
 // #include <nuklear\demo\glfw_opengl3\nuklear_glfw_gl3.h>
 //----------------------------------------------------
 

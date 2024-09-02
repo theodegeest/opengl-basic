@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/glad/glad.h"
-#include "../include/stb/std_image.h"
+#include "../../include/glad/glad.h"
+#include "../../include/stb/std_image.h"
 #include "debug.h"
 
 /******************************************************************************

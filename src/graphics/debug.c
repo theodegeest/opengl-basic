@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "../include/glad/glad.h"
+#include "../../include/glad/glad.h"
 
 void glClearError() {
   while (glGetError() != GL_NO_ERROR) {

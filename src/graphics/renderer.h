@@ -4,6 +4,7 @@
 #include "shader.h"
 #include "vertex_array.h"
 #include "vertex_buffer.h"
+
 typedef struct {
 
 } Renderer;

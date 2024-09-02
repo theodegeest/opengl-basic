@@ -1,7 +1,7 @@
 #ifndef SHADER_H_
 #define SHADER_H_
 
-#include "map.h"
+#include "../map.h"
 #include <cglm/types.h>
 #include <stdlib.h>
 

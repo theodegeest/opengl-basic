@@ -1,8 +1,7 @@
 #include "vertex_buffer_layout.h"
-#include <math.h>
 #include <stdlib.h>
 
-#include "../include/glad/glad.h"
+#include "../../include/glad/glad.h"
 #include <stdio.h>
 
 static void _check_layout_size(VertexBufferLayout *layout);

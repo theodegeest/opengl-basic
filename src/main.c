@@ -14,8 +14,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "debug.h"
-#include "ui.h"
+#include "./graphics/debug.h"
+#include "./graphics/ui.h"
 
 typedef struct {
   const char *name;

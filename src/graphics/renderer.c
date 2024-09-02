@@ -1,9 +1,8 @@
 #include "renderer.h"
 #include <stdlib.h>
 
-#include "../include/glad/glad.h"
+#include "../../include/glad/glad.h"
 #include "debug.h"
-#include "index_buffer.h"
 
 Renderer *renderer_create() {
   Renderer *renderer = malloc(sizeof(Renderer));

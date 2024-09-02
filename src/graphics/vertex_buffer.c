@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/glad/glad.h"
+#include "../../include/glad/glad.h"
 #include "debug.h"
 
 static unsigned int _check_boundaries(VertexBuffer *vb);

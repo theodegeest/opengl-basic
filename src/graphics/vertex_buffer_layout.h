@@ -20,9 +20,6 @@ typedef struct {
 VertexBufferLayout *vertex_buffer_layout_create();
 void vertex_buffer_layout_free(VertexBufferLayout *layout);
 
-// void vertex_buffer_layout_bind(VertexBufferLayout *layout);
-// void vertex_buffer_layout_unbind();
-
 void vertex_buffer_layout_push_float(VertexBufferLayout *layout,
                                      unsigned int count);
 

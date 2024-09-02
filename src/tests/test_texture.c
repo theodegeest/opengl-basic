@@ -1,11 +1,10 @@
 #include "test_texture.h"
 #include "../../include/glad/glad.h"
-#include "../debug.h"
-#include "../index_buffer.h"
-#include "../renderer.h"
-#include "../shader.h"
-#include "../texture.h"
-#include "../vertex_array.h"
+#include "../graphics/index_buffer.h"
+#include "../graphics/renderer.h"
+#include "../graphics/shader.h"
+#include "../graphics/texture.h"
+#include "../graphics/vertex_array.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>

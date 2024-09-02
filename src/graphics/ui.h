@@ -1,8 +1,8 @@
 #ifndef UI_H_
 #define UI_H_
 
-#include "../include/Nuklear/nuklear.h"
-#include "tests/test.h"
+#include "../../include/Nuklear/nuklear.h"
+#include "../tests/test.h"
 #include <GLFW/glfw3.h>
 
 typedef struct {

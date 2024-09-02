@@ -1,7 +1,6 @@
 #include "shader.h"
 
-#include "../include/glad/glad.h"
-// #include "map.h"
+#include "../../include/glad/glad.h"
 #include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,7 +1,7 @@
 #ifndef VERTEX_BUFFER_H_
 #define VERTEX_BUFFER_H_
 
-#include "mesh/quad.h"
+#include "../mesh/quad.h"
 
 #define BUFFER_MAX_CAPACITY 10000
 
