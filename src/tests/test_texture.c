@@ -34,17 +34,14 @@ static void on_update(void *obj, float delta_time) {
   // Create Quads
   vertex_buffer_clear(t_obj->vb);
 
-  Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f,
+  Quad left_quad = quad_create(100.0f, 200.0f, 0.0f, 100.0f, 100.0f, 0.0f,
                                (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-  Quad right_quad = quad_create(250.0f, 200.0f, 100.0f, 100.0f,
+  Quad right_quad = quad_create(250.0f, 200.0f, 0.0f, 100.0f, 100.0f, 0.0f,
                                 (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
   vertex_buffer_push_quad(t_obj->vb, left_quad);
   vertex_buffer_push_quad(t_obj->vb, right_quad);
-
-  // printf("%f\n", t_obj->vb->buffer[4].ld.pos.x);
-  // printf("%f\n", t_obj->vb->buffer[100].ld.pos.x);
 
   vertex_buffer_flush(t_obj->vb);
 }
@@ -73,22 +70,6 @@ static void on_render(void *obj) {
 
     renderer_draw(t_obj->renderer, t_obj->va, t_obj->vb, t_obj->shader);
   }
-
-  // {
-  //   mat4 model;
-  //   glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
-  //   glm_translate(
-  //       model, (vec3){t_obj->value_x * 2, t_obj->value_y * 2,
-  //       t_obj->value_z});
-  //
-  //   mat4 mvp;
-  //   glm_mat4_mul(t_obj->proj, t_obj->view, mvp);
-  //   glm_mat4_mul(mvp, model, mvp);
-  //
-  //   shader_uniform_set_mat4f(t_obj->shader, "u_MVP", mvp);
-  //
-  //   renderer_draw(t_obj->renderer, t_obj->va, t_obj->ib, t_obj->shader);
-  // }
 
   vertex_array_unbind();
 }
@@ -134,7 +115,7 @@ static void on_ui_render(void *obj, void *context) {
     gcvt(t_obj->value_z, 9, val);
     nk_label(context, val, NK_TEXT_LEFT);
     nk_layout_row_push(context, 110);
-    nk_slider_float(context, -100.0f, &t_obj->value_z, 100.0f, 1.0f);
+    nk_slider_float(context, -1.0f, &t_obj->value_z, 1.0f, 1.0f);
   }
   nk_layout_row_end(context);
 }

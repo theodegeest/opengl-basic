@@ -1,10 +1,9 @@
-#include "test_batch_rendering.h"
+#include "test_color.h"
 #include "../../include/glad/glad.h"
 #include "../debug.h"
 #include "../index_buffer.h"
 #include "../renderer.h"
 #include "../shader.h"
-#include "../texture.h"
 #include "../vertex_array.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
@@ -18,58 +17,49 @@ typedef struct {
   IndexBuffer *ib;
   VertexBufferLayout *layout;
   Shader *shader;
-  Texture *texture;
   Renderer *renderer;
-  float value_x;
-  float value_y;
-  float value_z;
+  struct nk_colorf color;
   mat4 proj;
   mat4 view;
-} BatchRenderingObj;
+} ColorObj;
 
 static void on_update(void *obj, float delta_time) {
-  BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
+  ColorObj *c_obj = (ColorObj *)obj;
   // printf("Clear Color On Update\n");
 
   // Create Quads
-  vertex_buffer_clear(b_obj->vb);
+  vertex_buffer_clear(c_obj->vb);
 
-  int size = 10;
+  Quad left_quad = quad_create(350.0f, 250.0f, 0.0f, 100.0f, 100.0f, 0.0f,
+                               (Color){c_obj->color.r, c_obj->color.g, c_obj->color.b, c_obj->color.a}, 0);
 
-  for (int i = 0; i < 70; i++) {
-    for (int j = 0; j < 50; j++) {
-      Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size, size,
-                           0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-      vertex_buffer_push_quad(b_obj->vb, q);
-    }
-  }
+  vertex_buffer_push_quad(c_obj->vb, left_quad);
 
-  vertex_buffer_flush(b_obj->vb);
+  // printf("%f\n", c_obj->vb->buffer[4].ld.pos.x);
+  // printf("%f\n", c_obj->vb->buffer[100].ld.pos.x);
+
+  vertex_buffer_flush(c_obj->vb);
 }
 
 static void on_render(void *obj) {
   // printf("Clear Color On Render\n");
-  BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
-  renderer_clear(b_obj->renderer);
+  ColorObj *c_obj = (ColorObj *)obj;
+  renderer_clear(c_obj->renderer);
 
   // Use our shader program
-  shader_bind(b_obj->shader);
-
-  texture_bind(b_obj->texture, 0);
+  shader_bind(c_obj->shader);
 
   {
     mat4 model;
     glm_translate_make(model, (vec3){0.0f, 0.0f, 0.0f});
-    glm_translate(model,
-                  (vec3){b_obj->value_x, b_obj->value_y, b_obj->value_z});
 
     mat4 mvp;
-    glm_mat4_mul(b_obj->proj, b_obj->view, mvp);
+    glm_mat4_mul(c_obj->proj, c_obj->view, mvp);
     glm_mat4_mul(mvp, model, mvp);
 
-    shader_uniform_set_mat4f(b_obj->shader, "u_MVP", mvp);
+    shader_uniform_set_mat4f(c_obj->shader, "u_MVP", mvp);
 
-    renderer_draw(b_obj->renderer, b_obj->va, b_obj->vb, b_obj->shader);
+    renderer_draw(c_obj->renderer, c_obj->va, c_obj->vb, c_obj->shader);
   }
 
   // {
@@ -92,47 +82,19 @@ static void on_render(void *obj) {
 }
 
 static void on_ui_render(void *obj, void *context) {
-  BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
+  ColorObj *c_obj = (ColorObj *)obj;
 
-  /* custom widget pixel width */
-  nk_layout_row_begin(context, NK_STATIC, 25, 3);
+  nk_layout_row_begin(context, NK_STATIC, 20, 1);
   {
-    nk_layout_row_push(context, 20);
-    nk_label(context, "X:", NK_TEXT_LEFT);
-    nk_layout_row_push(context, 30);
-    char val[10];
-    gcvt(b_obj->value_x, 9, val);
-    nk_label(context, val, NK_TEXT_LEFT);
     nk_layout_row_push(context, 110);
-    nk_slider_float(context, -100.0f, &b_obj->value_x, 100.0f, 1.0f);
+    nk_label(context, "Color:", NK_TEXT_LEFT);
   }
   nk_layout_row_end(context);
 
-  /* custom widget pixel width */
-  nk_layout_row_begin(context, NK_STATIC, 25, 3);
+  nk_layout_row_begin(context, NK_STATIC, 90, 1);
   {
-    nk_layout_row_push(context, 20);
-    nk_label(context, "Y:", NK_TEXT_LEFT);
-    nk_layout_row_push(context, 30);
-    char val[10];
-    gcvt(b_obj->value_y, 9, val);
-    nk_label(context, val, NK_TEXT_LEFT);
-    nk_layout_row_push(context, 110);
-    nk_slider_float(context, -100.0f, &b_obj->value_y, 100.0f, 1.0f);
-  }
-  nk_layout_row_end(context);
-
-  /* custom widget pixel width */
-  nk_layout_row_begin(context, NK_STATIC, 25, 3);
-  {
-    nk_layout_row_push(context, 20);
-    nk_label(context, "Z:", NK_TEXT_LEFT);
-    nk_layout_row_push(context, 30);
-    char val[10];
-    gcvt(b_obj->value_z, 9, val);
-    nk_label(context, val, NK_TEXT_LEFT);
-    nk_layout_row_push(context, 110);
-    nk_slider_float(context, -1.0f, &b_obj->value_z, 1.0f, 1.0f);
+    nk_layout_row_push(context, 150);
+    c_obj->color = nk_color_picker(context, c_obj->color, NK_RGBA);
   }
   nk_layout_row_end(context);
 }
@@ -140,20 +102,19 @@ static void on_ui_render(void *obj, void *context) {
 static void on_free(void *test) {
   printf("Clear Color On Free\n");
   Test *test_p = (Test *)test;
-  BatchRenderingObj *obj = (BatchRenderingObj *)test_p->obj;
+  ColorObj *obj = (ColorObj *)test_p->obj;
 
   vertex_array_free(obj->va);
   vertex_buffer_free(obj->vb);
   index_buffer_free(obj->ib);
   vertex_buffer_layout_free(obj->layout);
   shader_free(obj->shader);
-  texture_free(obj->texture);
   renderer_free(obj->renderer);
   free(obj);
   free(test);
 }
 
-Test *test_batch_rendering_init() {
+Test *test_color_init() {
   Test *test = malloc(sizeof(Test));
 
   test->on_update = &on_update;
@@ -161,18 +122,16 @@ Test *test_batch_rendering_init() {
   test->on_ui_render = &on_ui_render;
   test->on_free = &on_free;
 
-  BatchRenderingObj *obj = malloc(sizeof(BatchRenderingObj));
+  ColorObj *obj = malloc(sizeof(ColorObj));
   test->obj = obj;
 
-  obj->value_x = 0.0f;
-  obj->value_y = 0.0f;
-  obj->value_z = 0.0f;
+  obj->color = (struct nk_colorf){1.0f, 0.0f, 0.0f, 1.0f};
 
   obj->renderer = renderer_create();
 
   renderer_set_clear_color(obj->renderer, (float[]){0.2f, 0.3f, 0.3f, 1.0f});
 
-  obj->shader = shader_create("resources/shaders/batch-rendering.glsl");
+  obj->shader = shader_create("resources/shaders/color.glsl");
   shader_bind(obj->shader);
 
   // Create and bind a Vertex Array Object
@@ -196,12 +155,6 @@ Test *test_batch_rendering_init() {
 
   glm_mat4_identity(obj->view);
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});
-
-  obj->texture = texture_create("resources/textures/small-circle.png");
-  texture_bind(obj->texture, 0);
-
-  int samplers[2] = {0, 1};
-  shader_uniform_set_1iv(obj->shader, "u_Texture", 2, samplers);
 
   // Unbind the VBO and VAO
   vertex_array_unbind();

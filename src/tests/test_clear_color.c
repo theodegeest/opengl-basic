@@ -10,7 +10,7 @@
 typedef struct {
   struct nk_colorf clear_color;
   Renderer *renderer;
-} ClearColorObj;
+} BatchRenderingObj;
 
 static void on_update(void *obj, float delta_time) {
   // printf("Clear Color On Update\n");
@@ -18,16 +18,13 @@ static void on_update(void *obj, float delta_time) {
 
 static void on_render(void *obj) {
   // printf("Clear Color On Render\n");
-  ClearColorObj *c_obj = (ClearColorObj *)obj;
+  BatchRenderingObj *c_obj = (BatchRenderingObj *)obj;
   renderer_set_clear_color(c_obj->renderer, &c_obj->clear_color.r);
-  // GLCall(glClearColor(c_obj->clear_color.r, c_obj->clear_color.g,
-  //                     c_obj->clear_color.b, c_obj->clear_color.a));
-  // GLCall(glClear(GL_COLOR_BUFFER_BIT));
   renderer_clear(c_obj->renderer);
 }
 
 static void on_ui_render(void *obj, void *context) {
-  ClearColorObj *c_obj = (ClearColorObj *)obj;
+  BatchRenderingObj *c_obj = (BatchRenderingObj *)obj;
 
   nk_layout_row_begin(context, NK_STATIC, 20, 1);
   {
@@ -47,7 +44,7 @@ static void on_ui_render(void *obj, void *context) {
 static void on_free(void *test) {
   printf("Clear Color On Free\n");
   Test *test_p = (Test *)test;
-  ClearColorObj *obj = (ClearColorObj *)test_p->obj;
+  BatchRenderingObj *obj = (BatchRenderingObj *)test_p->obj;
 
   renderer_free(obj->renderer);
   free(obj);
@@ -62,7 +59,7 @@ Test *test_clear_color_init() {
   test->on_ui_render = &on_ui_render;
   test->on_free = &on_free;
 
-  ClearColorObj *obj = malloc(sizeof(ClearColorObj));
+  BatchRenderingObj *obj = malloc(sizeof(BatchRenderingObj));
   test->obj = obj;
 
   obj->clear_color = (struct nk_colorf){0.2f, 0.3f, 0.3f, 1.0f};

@@ -2,6 +2,8 @@
 #include "tests/test.h"
 #include "tests/test_batch_rendering.h"
 #include "tests/test_clear_color.h"
+#include "tests/test_color.h"
+#include "tests/test_cube.h"
 #include "tests/test_empty.h"
 #include "tests/test_texture.h"
 #include <GLFW/glfw3.h>
@@ -113,8 +115,10 @@ int main(void) {
   TestPair test_pairs[] = {
       {"Empty", &test_empty_init},
       {"Clear Color", &test_clear_color_init},
+      {"Color", &test_color_init},
       {"Texture", &test_texture_init},
       {"Batch Rendering", &test_batch_rendering_init},
+      {"Cube", &test_cube_init},
   };
 
   Test *test = test_pairs[0].init_function();
