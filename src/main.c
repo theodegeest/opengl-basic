@@ -9,33 +9,13 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
-//----------------------nk-------------------------
-// Here we define everything needed to set up the library with glfw.
-// Note that nuklear_glfw_gl3.h should be included after nuklear.h.
-#define MAX_VERTEX_BUFFER 512 * 1024
-#define MAX_ELEMENT_BUFFER 128 * 1024
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_IMPLEMENTATION
-#define NK_GLFW_GL4_IMPLEMENTATION
-
-#include "../include/Nuklear/nuklear.h"
-//
-#include "../include/Nuklear/demo/glfw_opengl4/nuklear_glfw_gl4.h"
-// #include <nuklear\demo\glfw_opengl3\nuklear_glfw_gl3.h>
-//----------------------------------------------------
-
 #include <cglm/cglm.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "debug.h"
+#include "ui.h"
 
 typedef struct {
   const char *name;
@@ -47,6 +27,23 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action,
                   int mods) {
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+struct ui_args {
+  const char **test_options;
+  int number_of_tests;
+  int *selected_test_index;
+  Test *test;
+};
+
+static void on_ui_function(struct nk_context *context, void *args) {
+  struct ui_args *args_obj = (struct ui_args *)args;
+
+  nk_layout_row_dynamic(context, 30, 1);
+  nk_combobox(context, args_obj->test_options, args_obj->number_of_tests, args_obj->selected_test_index, 20,
+              (struct nk_vec2){200, 100});
+
+  test_on_ui_render(args_obj->test, context);
 }
 
 int main(void) {
@@ -80,17 +77,7 @@ int main(void) {
     return -1;
   }
 
-  //-------------------------nk-------------------------------
-  // Here we set up the context for nuklear which contains info about the
-  // styles, fonts etc about the GUI We also set up the font here
-  struct nk_context *context =
-      nk_glfw3_init(window, NK_GLFW3_INSTALL_CALLBACKS, MAX_VERTEX_BUFFER,
-                    MAX_ELEMENT_BUFFER);
-  // set up font
-  struct nk_font_atlas *atlas;
-  nk_glfw3_font_stash_begin(&atlas);
-  nk_glfw3_font_stash_end();
-  //----------------------------------------------------------
+  UI ui = ui_init(window);
 
   const GLubyte *gl_renderer = glGetString(GL_RENDERER); // get the GPU renderer
   const GLubyte *version = glGetString(GL_VERSION); // get the OpenGL version
@@ -166,33 +153,13 @@ int main(void) {
     // Display the framerate (for debugging)
     // printf("FPS: %.2f\n", fps);
 
-    //--------------------------nk------------------------------
-    // create a new frame for every iteration of the loop
-    // here we set up the nk_window
-    nk_glfw3_new_frame();
+    struct ui_args args;
+    args.test_options = test_options;
+    args.number_of_tests = number_of_tests;
+    args.selected_test_index = &selected_test_index;
+    args.test = test;
 
-    if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
-                 NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
-                     NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE)) {
-      nk_layout_row_begin(context, NK_STATIC, 30, 2);
-      {
-        nk_layout_row_push(context, 30);
-        nk_label(context, "fps:", NK_TEXT_LEFT);
-        nk_layout_row_push(context, 50);
-        char string_fps[11];
-        gcvt(fps, 8, string_fps);
-        nk_label(context, string_fps, NK_TEXT_LEFT);
-      }
-      nk_layout_row_end(context);
-
-      nk_layout_row_dynamic(context, 30, 1);
-      nk_combobox(context, test_options, number_of_tests, &selected_test_index,
-                  20, (struct nk_vec2){200, 100});
-
-      test_on_ui_render(test, context);
-    }
-    nk_end(context);
-    //------------------------------------------------------------
+    ui_draw_gui(ui, test, fps, &on_ui_function, &args);
 
     if (selected_test_index != previous_selected) {
       test_on_free(test);
@@ -208,10 +175,7 @@ int main(void) {
     // glClear(GL_COLOR_BUFFER_BIT);
     // renderer_clear(renderer);
 
-    //-------------------------nk------------------------------------
-    // don't forget to draw your window!
-    nk_glfw3_render(NK_ANTI_ALIASING_ON);
-    //---------------------------------------------------------------
+    ui_render(ui);
     // Swap front and back buffers
     glfwSwapBuffers(window);
 
@@ -223,9 +187,7 @@ int main(void) {
 
   test_on_free(test);
 
-  //-------------------------nk------------------------------------
-  nk_glfw3_shutdown();
-  //-------------------------------------------------------------
+  ui_free(ui);
 
   glfwDestroyWindow(window);
   glfwTerminate();
