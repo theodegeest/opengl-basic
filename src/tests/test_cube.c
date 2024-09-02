@@ -6,6 +6,7 @@
 #include "../shader.h"
 #include "../texture.h"
 #include "../vertex_array.h"
+#include <cglm/cam.h>
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@ typedef struct {
   float value_x;
   float value_y;
   float value_z;
+  float value_depth;
   mat4 proj;
   mat4 view;
 } CubeObj;
@@ -34,9 +36,9 @@ static void on_update(void *obj, float delta_time) {
   // Create Quads
   vertex_buffer_clear(c_obj->vb);
 
-  Quad left_quad = quad_create(100.0f, 200.0f, 0.0f, 100.0f, 100.0f, 0.0f,
+  Quad left_quad = quad_create(200.0f, 200.0f, 0.0f, 100.0f, 100.0f, c_obj->value_depth,
                                (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-  Quad right_quad = quad_create(250.0f, 200.0f, 0.0f, 100.0f, 100.0f, 0.0f,
+  Quad right_quad = quad_create(350.0f, 200.0f, 0.0f, 100.0f, 100.0f, c_obj->value_depth * 2,
                                 (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
@@ -137,6 +139,20 @@ static void on_ui_render(void *obj, void *context) {
     nk_slider_float(context, -1.0f, &c_obj->value_z, 1.0f, 1.0f);
   }
   nk_layout_row_end(context);
+
+  /* custom widget pixel width */
+  nk_layout_row_begin(context, NK_STATIC, 25, 3);
+  {
+    nk_layout_row_push(context, 20);
+    nk_label(context, "Depth:", NK_TEXT_LEFT);
+    nk_layout_row_push(context, 30);
+    char val[10];
+    gcvt(c_obj->value_depth, 9, val);
+    nk_label(context, val, NK_TEXT_LEFT);
+    nk_layout_row_push(context, 110);
+    nk_slider_float(context, -100.0f, &c_obj->value_depth, 100.0f, 1.0f);
+  }
+  nk_layout_row_end(context);
 }
 
 static void on_free(void *test) {
@@ -169,6 +185,7 @@ Test *test_cube_init() {
   obj->value_x = 0.0f;
   obj->value_y = 0.0f;
   obj->value_z = 0.0f;
+  obj->value_depth = 0.0f;
 
   obj->renderer = renderer_create();
 
@@ -194,7 +211,7 @@ Test *test_cube_init() {
   // obj->ib = index_buffer_create(indices, 6 * 3);
   obj->ib = index_buffer_create_quad();
 
-  glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -1.0f, 1.0f, obj->proj);
+  glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -100.0f, 100.0f, obj->proj);
 
   glm_mat4_identity(obj->view);
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});
