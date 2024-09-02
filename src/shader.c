@@ -1,7 +1,7 @@
 #include "shader.h"
 
 #include "../include/glad/glad.h"
-#include "map.h"
+// #include "map.h"
 #include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +50,10 @@ void shader_unbind() { GLCall(glUseProgram(0)); }
 
 void shader_uniform_set_1i(Shader *shader, const char *name, int v0) {
   GLCall(glUniform1i(_shader_uniform_location_get(shader, name), v0));
+}
+
+void shader_uniform_set_1iv(Shader *shader, const char *name, int count, int *data) {
+  GLCall(glUniform1iv(_shader_uniform_location_get(shader, name), count, data));
 }
 
 void shader_uniform_set_1f(Shader *shader, const char *name, float v0) {

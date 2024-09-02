@@ -28,7 +28,20 @@ typedef struct {
 } ClearColorObj;
 
 static void on_update(void *obj, float delta_time) {
+  ClearColorObj *c_obj = (ClearColorObj *)obj;
   // printf("Clear Color On Update\n");
+
+  // Create Quads
+  vertex_buffer_clear(c_obj->vb);
+
+  Quad left_quad = quad_create(100.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  Quad right_quad = quad_create(300.0f, 200.0f, 100.0f, 100.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  // quad_print(left_quad);
+
+  vertex_buffer_push_quad(c_obj->vb, left_quad);
+  vertex_buffer_push_quad(c_obj->vb, right_quad);
+
+  vertex_buffer_flush(c_obj->vb);
 }
 
 static void on_render(void *obj) {
@@ -41,9 +54,11 @@ static void on_render(void *obj) {
 
   texture_bind(c_obj->texture, 0);
 
+
+
   {
     mat4 model;
-    glm_translate_make(model, (vec3){100.0f, 100.0f, 0.0f});
+    glm_translate_make(model, (vec3){0.0f, 0.0f, 0.0f});
     glm_translate(model,
                        (vec3){c_obj->value_x, c_obj->value_y, c_obj->value_z});
 
@@ -53,23 +68,23 @@ static void on_render(void *obj) {
 
     shader_uniform_set_mat4f(c_obj->shader, "u_MVP", mvp);
 
-    renderer_draw(c_obj->renderer, c_obj->va, c_obj->ib, c_obj->shader);
+    renderer_draw(c_obj->renderer, c_obj->va, c_obj->vb, c_obj->shader);
   }
 
-  {
-    mat4 model;
-    glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
-    glm_translate(
-        model, (vec3){c_obj->value_x * 2, c_obj->value_y * 2, c_obj->value_z});
-
-    mat4 mvp;
-    glm_mat4_mul(c_obj->proj, c_obj->view, mvp);
-    glm_mat4_mul(mvp, model, mvp);
-
-    shader_uniform_set_mat4f(c_obj->shader, "u_MVP", mvp);
-
-    renderer_draw(c_obj->renderer, c_obj->va, c_obj->ib, c_obj->shader);
-  }
+  // {
+  //   mat4 model;
+  //   glm_translate_make(model, (vec3){300.0f, 100.0f, 0.0f});
+  //   glm_translate(
+  //       model, (vec3){c_obj->value_x * 2, c_obj->value_y * 2, c_obj->value_z});
+  //
+  //   mat4 mvp;
+  //   glm_mat4_mul(c_obj->proj, c_obj->view, mvp);
+  //   glm_mat4_mul(mvp, model, mvp);
+  //
+  //   shader_uniform_set_mat4f(c_obj->shader, "u_MVP", mvp);
+  //
+  //   renderer_draw(c_obj->renderer, c_obj->va, c_obj->ib, c_obj->shader);
+  // }
 
   vertex_array_unbind();
 }
@@ -158,28 +173,31 @@ Test *test_texture_init() {
   obj->shader = shader_create("resources/shaders/texture.glsl");
   shader_bind(obj->shader);
 
-  float vertices[] = {-50.0f, -50.0f, 0.0f,  0.0f,  0.0f,  50.0f, -50.0f,
-                      0.0f,   1.0f,   0.0f,  50.0f, 50.0f, 0.0f,  1.0f,
-                      1.0f,   -50.0f, 50.0f, 0.0f,  0.0f,  1.0f};
+  // float vertices[] = {-50.0f, -50.0f, 0.0f,  0.0f,  0.0f,  50.0f, -50.0f,
+  //                     0.0f,   1.0f,   0.0f,  50.0f, 50.0f, 0.0f,  1.0f,
+  //                     1.0f,   -50.0f, 50.0f, 0.0f,  0.0f,  1.0f};
 
   unsigned int indices[] = {
-      0, 1, 3, // first triangle
-      1, 2, 3  // second triangle
+      0, 1, 2, 2, 3, 0,
+      4, 5, 6, 6, 7, 4,
+      8, 9, 10, 10, 11, 8
   };
 
   // Create and bind a Vertex Array Object
   obj->va = vertex_array_create();
 
   // Create and bind a Vertex Buffer Object
-  obj->vb = vertex_buffer_create(vertices, sizeof(vertices));
+  obj->vb = vertex_buffer_create();
 
   obj->layout = vertex_buffer_layout_create();
   vertex_buffer_layout_push_float(obj->layout, 3);
+  vertex_buffer_layout_push_float(obj->layout, 4);
   vertex_buffer_layout_push_float(obj->layout, 2);
+  vertex_buffer_layout_push_float(obj->layout, 1);
   vertex_array_add_buffer(obj->va, obj->vb, obj->layout);
 
   // Create and bind a Index Buffer Object
-  obj->ib = index_buffer_create(indices, 6);
+  obj->ib = index_buffer_create(indices, 6 * 3);
 
   glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -1.0f, 1.0f, obj->proj);
 
@@ -188,7 +206,9 @@ Test *test_texture_init() {
 
   obj->texture = texture_create("resources/textures/opengl.png");
   texture_bind(obj->texture, 0);
-  shader_uniform_set_1i(obj->shader, "u_Texture", 0);
+
+  int samplers[2] = {0, 1};
+  shader_uniform_set_1iv(obj->shader, "u_Texture", 2, samplers);
 
   // Unbind the VBO and VAO
   vertex_array_unbind();

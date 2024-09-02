@@ -22,10 +22,10 @@ void renderer_set_clear_color(Renderer *renderer, float *rgba_values) {
                       rgba_values[3]));
 }
 
-void renderer_draw(Renderer *renderer, VertexArray *va, IndexBuffer *ib,
+void renderer_draw(Renderer *renderer, VertexArray *va, VertexBuffer *vb,
                    Shader *shader) {
   shader_bind(shader);
   vertex_array_bind(va);
-  index_buffer_bind(ib);
-  GLCall(glDrawElements(GL_TRIANGLES, ib->count, GL_UNSIGNED_INT, NULL));
+  // index_buffer_bind(ib);
+  GLCall(glDrawElements(GL_TRIANGLES, 6 * vb->size, GL_UNSIGNED_INT, NULL));
 }

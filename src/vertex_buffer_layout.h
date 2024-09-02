@@ -1,7 +1,7 @@
 #ifndef VERTEX_BUFFER_LAYOUT_H_
 #define VERTEX_BUFFER_LAYOUT_H_
 
-#define VERTEX_BUFFER_LAYOUT_MAX_SIZE 2
+#define VERTEX_BUFFER_LAYOUT_MAX_SIZE 5
 
 typedef struct {
   unsigned int count;

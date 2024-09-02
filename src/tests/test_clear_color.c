@@ -1,6 +1,5 @@
 #include "test_clear_color.h"
 #include "../../include/glad/glad.h"
-#include "../debug.h"
 #include "../renderer.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
