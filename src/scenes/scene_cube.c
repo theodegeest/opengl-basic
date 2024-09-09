@@ -200,7 +200,7 @@ Scene *scene_cube_init() {
   obj->va = vertex_array_create();
 
   // Create and bind a Vertex Buffer Object
-  obj->vb = vertex_buffer_create();
+  obj->vb = vertex_buffer_create(4 * 2);
 
   obj->layout = vertex_buffer_layout_create();
   vertex_buffer_layout_push_float(obj->layout, 3);
@@ -211,7 +211,7 @@ Scene *scene_cube_init() {
 
   // Create and bind a Index Buffer Object
   // obj->ib = index_buffer_create(indices, 6 * 3);
-  obj->ib = index_buffer_create_quad();
+  obj->ib = index_buffer_create_quad(2);
 
   glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -100.0f, 100.0f, obj->proj);
 

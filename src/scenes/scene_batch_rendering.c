@@ -27,6 +27,10 @@ typedef struct {
   mat4 view;
 } BatchRenderingObj;
 
+#define NUMBER_WIDTH 70
+#define NUMBER_HEIGHT 50
+
+
 static void on_update(void *obj, float delta_time) {
   BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
   // printf("Clear Color On Update\n");
@@ -36,8 +40,8 @@ static void on_update(void *obj, float delta_time) {
 
   int size = 10;
 
-  for (int i = 0; i < 70; i++) {
-    for (int j = 0; j < 50; j++) {
+  for (int i = 0; i < NUMBER_WIDTH; i++) {
+    for (int j = 0; j < NUMBER_HEIGHT; j++) {
       Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size, size,
                            0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
       vertex_buffer_push_quad(b_obj->vb, q);
@@ -179,7 +183,7 @@ Scene *scene_batch_rendering_init() {
   obj->va = vertex_array_create();
 
   // Create and bind a Vertex Buffer Object
-  obj->vb = vertex_buffer_create();
+  obj->vb = vertex_buffer_create(NUMBER_WIDTH * NUMBER_HEIGHT * 4);
 
   obj->layout = vertex_buffer_layout_create();
   vertex_buffer_layout_push_float(obj->layout, 3);
@@ -190,7 +194,7 @@ Scene *scene_batch_rendering_init() {
 
   // Create and bind a Index Buffer Object
   // obj->ib = index_buffer_create(indices, 6 * 3);
-  obj->ib = index_buffer_create_quad();
+  obj->ib = index_buffer_create_quad(NUMBER_WIDTH * NUMBER_HEIGHT);
 
   glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f, obj->proj);
 

@@ -7,11 +7,11 @@
 
 typedef struct {
   unsigned int id;
-  Quad *buffer;
+  Vertex *buffer;
   unsigned int size;
 } VertexBuffer;
 
-VertexBuffer *vertex_buffer_create();
+VertexBuffer *vertex_buffer_create(int number_of_vertices);
 void vertex_buffer_free(VertexBuffer *vertexBuffer);
 
 void vertex_buffer_clear(VertexBuffer *vertexBuffer);

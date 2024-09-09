@@ -13,24 +13,24 @@ IndexBuffer *index_buffer_create(const void *data, unsigned int count) {
 
   GLCall(glGenBuffers(1, &ib->id));
   GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->id));
-  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int), data,
-               GL_STATIC_DRAW));
+  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int),
+                      data, GL_STATIC_DRAW));
 
   ib->count = count;
 
   return ib;
 }
 
-IndexBuffer *index_buffer_create_quad() {
+IndexBuffer *index_buffer_create_quad(int number_of_quads) {
   IndexBuffer *ib = malloc(sizeof(IndexBuffer));
 
   // Generate indices
 
-  unsigned int indices[MAX_INDEX_BUFFER_CAPACITY * 6];
+  unsigned int indices[number_of_quads * 6];
 
   unsigned int index_pattern[6] = {0, 1, 2, 2, 3, 0};
 
-  for (int i = 0; i < MAX_INDEX_BUFFER_CAPACITY; i++) {
+  for (int i = 0; i < number_of_quads; i++) {
     int start_index = i * 6;
     for (int j = 0; j < 6; j++) {
       int current_index = start_index + j;
@@ -40,10 +40,11 @@ IndexBuffer *index_buffer_create_quad() {
 
   GLCall(glGenBuffers(1, &ib->id));
   GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->id));
-  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_INDEX_BUFFER_CAPACITY * sizeof(unsigned int) * 6, indices,
-               GL_STATIC_DRAW));
+  GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                      number_of_quads * sizeof(unsigned int) * 6, indices,
+                      GL_STATIC_DRAW));
 
-  ib->count = MAX_INDEX_BUFFER_CAPACITY;
+  ib->count = number_of_quads;
 
   return ib;
 }

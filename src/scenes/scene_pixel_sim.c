@@ -173,7 +173,7 @@ static SimType get_type(VertexBuffer *vb, int x, int y) {
     return TYPE_OUTOFBOUNDS;
   }
   int i = SIM_WIDTH * y + x;
-  Quad *q = vertex_buffer_quad_get(vb, i);
+  Quad *q = vertex_buffer_quad_get(vb, i * 4);
   return get_type_from_texture_id(quad_texture_id_get(q));
 }
 
@@ -209,7 +209,7 @@ static void set_type(VertexBuffer *vb, int x, int y, SimType type) {
     return;
   }
   int i = SIM_WIDTH * y + x;
-  Quad *q = vertex_buffer_quad_get(vb, i);
+  Quad *q = vertex_buffer_quad_get(vb, i * 4);
   quad_texture_id_set(q, type);
 }
 
@@ -362,7 +362,8 @@ static void on_update(void *obj, float delta_time) {
   // }
 
   int total = SIM_WIDTH * SIM_HEIGHT;
-  Quad *spawn_q = vertex_buffer_quad_get(p_obj->vb, total - SIM_WIDTH / 2);
+  Quad *spawn_q =
+      vertex_buffer_quad_get(p_obj->vb, (total - SIM_WIDTH / 2) * 4);
   quad_texture_id_set(spawn_q, 2);
 
   for (int i = 0; i < total; i++) {
@@ -501,7 +502,7 @@ Scene *scene_pixel_sim_init() {
   obj->va = vertex_array_create();
 
   // Create and bind a Vertex Buffer Object
-  obj->vb = vertex_buffer_create();
+  obj->vb = vertex_buffer_create(SIM_WIDTH * SIM_HEIGHT * 4);
 
   obj->layout = vertex_buffer_layout_create();
   vertex_buffer_layout_push_float(obj->layout, 3);
@@ -512,7 +513,7 @@ Scene *scene_pixel_sim_init() {
 
   // Create and bind a Index Buffer Object
   // obj->ib = index_buffer_create(indices, 6 * 3);
-  obj->ib = index_buffer_create_quad();
+  obj->ib = index_buffer_create_quad(SIM_WIDTH * SIM_HEIGHT);
 
   glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f, obj->proj);
 

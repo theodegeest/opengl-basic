@@ -9,7 +9,7 @@ typedef struct {
 } IndexBuffer;
 
 IndexBuffer *index_buffer_create(const void *data, unsigned int count);
-IndexBuffer *index_buffer_create_quad();
+IndexBuffer *index_buffer_create_quad(int number_of_quads);
 void index_buffer_free(IndexBuffer *indexBuffer);
 
 void index_buffer_bind(IndexBuffer *indexBuffer);
