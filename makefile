@@ -33,5 +33,9 @@ zip:
 	rm -f $(ZIPNAME)
 	zip $(ZIPNAME) $(SRC)/*
 
+release: CFLAGS = -Wall -O3
+release: clean
+release: $(target)
+
 cleanmake: clean
 cleanmake: $(target)

@@ -1,12 +1,12 @@
 #include "../../include/glad/glad.h"
 #include "graphics.h"
+#include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "debug.h"
 
 // Function to handle key events
 static void key_callback(GLFWwindow *window, int key, int scancode, int action,
-                  int mods) {
+                         int mods) {
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
@@ -24,8 +24,8 @@ GLFWwindow *graphics_init(int vsync) {
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   // Create a windowed mode window and its OpenGL context
-  GLFWwindow *window =
-      glfwCreateWindow(800, 600, "OpenGL with GLAD", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT,
+                                        "OpenGL with GLAD", NULL, NULL);
   if (!window) {
     fprintf(stderr, "Failed to create GLFW window\n");
     glfwTerminate();
@@ -44,7 +44,6 @@ GLFWwindow *graphics_init(int vsync) {
     exit(EXIT_FAILURE);
   }
 
-
   const GLubyte *gl_renderer = glGetString(GL_RENDERER); // get the GPU renderer
   const GLubyte *version = glGetString(GL_VERSION); // get the OpenGL version
 
@@ -59,4 +58,3 @@ GLFWwindow *graphics_init(int vsync) {
 
   return window;
 }
-

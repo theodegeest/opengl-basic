@@ -35,3 +35,14 @@ void quad_print(Quad quad) {
   printf("Quad(x: %f, y: %f, w: %f, h: %f)\n", quad.ld.pos.x, quad.ld.pos.y,
          quad.rd.pos.x - quad.ld.pos.x, quad.lu.pos.y - quad.ld.pos.y);
 }
+
+float quad_texture_id_get(Quad *q) {
+  return q->ld.texture_id;
+}
+
+void quad_texture_id_set(Quad *q, float texture_id) {
+  q->ld.texture_id = texture_id;
+  q->lu.texture_id = texture_id;
+  q->ru.texture_id = texture_id;
+  q->rd.texture_id = texture_id;
+}

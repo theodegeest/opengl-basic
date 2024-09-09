@@ -5,6 +5,7 @@
 #include "scenes/scene_color.h"
 #include "scenes/scene_cube.h"
 #include "scenes/scene_empty.h"
+#include "scenes/scene_pixel_sim.h"
 #include "scenes/scene_texture.h"
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -50,6 +51,7 @@ int main(void) {
       {"Texture", &scene_texture_init},
       {"Batch Rendering", &scene_batch_rendering_init},
       {"Cube", &scene_cube_init},
+      {"Pixel Sim", &scene_pixel_sim_init},
   };
 
   Scene *scene = scene_pairs[0].init_function();
@@ -121,6 +123,13 @@ int main(void) {
     ui.perf_values.update_time = timer_elapsed(update_time);
     ui.perf_values.scene_render_time = timer_elapsed(scene_render_time);
     ui.perf_values.ui_render_time = timer_elapsed(ui_render_time);
+
+    // int target_fps = 10;
+    // long target_frame_time = 1000000000 / target_fps;
+    // struct timespec delay;
+    // delay.tv_sec = target_frame_time / 1000000000L;
+    // delay.tv_nsec = target_frame_time % 1000000000L;
+    // nanosleep(&delay, NULL);
   }
 
   timer_free(frame_time);

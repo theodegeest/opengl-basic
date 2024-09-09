@@ -3,7 +3,7 @@
 
 #include "../mesh/quad.h"
 
-#define BUFFER_MAX_CAPACITY 10000
+#define BUFFER_MAX_CAPACITY 50000
 
 typedef struct {
   unsigned int id;
@@ -18,6 +18,7 @@ void vertex_buffer_clear(VertexBuffer *vertexBuffer);
 void vertex_buffer_flush(VertexBuffer *vertexBuffer);
 
 void vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad quad);
+Quad *vertex_buffer_quad_get(VertexBuffer *vertexBuffer, unsigned int index);
 
 void vertex_buffer_bind(VertexBuffer *vertexBuffer);
 void vertex_buffer_unbind();

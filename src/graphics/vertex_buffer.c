@@ -47,6 +47,14 @@ void vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad quad) {
   }
 }
 
+Quad *vertex_buffer_quad_get(VertexBuffer *vertexBuffer, unsigned int index) {
+  if (index < vertexBuffer->size) {
+    return &vertexBuffer->buffer[index];
+  }
+
+  return NULL;
+}
+
 void vertex_buffer_bind(VertexBuffer *vertexBuffer) {
   GLCall(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer->id));
 }

@@ -1,5 +1,6 @@
 #include "scene_cube.h"
 #include "../../include/glad/glad.h"
+#include "../graphics/graphics.h"
 #include "../graphics/index_buffer.h"
 #include "../graphics/renderer.h"
 #include "../graphics/shader.h"
@@ -35,10 +36,12 @@ static void on_update(void *obj, float delta_time) {
   // Create Quads
   vertex_buffer_clear(c_obj->vb);
 
-  Quad left_quad = quad_create(200.0f, 200.0f, 0.0f, 100.0f, 100.0f, c_obj->value_depth,
-                               (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-  Quad right_quad = quad_create(350.0f, 200.0f, 0.0f, 100.0f, 100.0f, c_obj->value_depth * 2,
-                                (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  Quad left_quad =
+      quad_create(200.0f, 200.0f, 0.0f, 100.0f, 100.0f, c_obj->value_depth,
+                  (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+  Quad right_quad =
+      quad_create(350.0f, 200.0f, 0.0f, 100.0f, 100.0f, c_obj->value_depth * 2,
+                  (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
   vertex_buffer_push_quad(c_obj->vb, left_quad);
@@ -210,7 +213,7 @@ Scene *scene_cube_init() {
   // obj->ib = index_buffer_create(indices, 6 * 3);
   obj->ib = index_buffer_create_quad();
 
-  glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -100.0f, 100.0f, obj->proj);
+  glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -100.0f, 100.0f, obj->proj);
 
   glm_mat4_identity(obj->view);
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});

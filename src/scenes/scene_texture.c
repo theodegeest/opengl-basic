@@ -5,6 +5,7 @@
 #include "../graphics/shader.h"
 #include "../graphics/texture.h"
 #include "../graphics/vertex_array.h"
+#include "../graphics/graphics.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -174,7 +175,7 @@ Scene *scene_texture_init() {
   // obj->ib = index_buffer_create(indices, 6 * 3);
   obj->ib = index_buffer_create_quad();
 
-  glm_ortho(0.0f, 800.0f, 0.0f, 600.0f, -1.0f, 1.0f, obj->proj);
+  glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f, obj->proj);
 
   glm_mat4_identity(obj->view);
   glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});

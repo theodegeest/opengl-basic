@@ -3,6 +3,9 @@
 
 #include <GLFW/glfw3.h>
 
+#define WINDOW_WIDTH 1400
+#define WINDOW_HEIGHT 1000
+
 GLFWwindow *graphics_init(int vsync);
 
 #endif // !GRAPHICS_H_
