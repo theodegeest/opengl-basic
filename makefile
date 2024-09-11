@@ -19,6 +19,9 @@ debug: CFLAGS = -Wall -g
 debug: clean
 debug: $(target)
 
+vsync: CFLAGS = -Wall -DVSYNC
+vsync: $(target)
+
 $(target): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS)
 

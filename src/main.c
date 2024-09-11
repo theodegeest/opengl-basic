@@ -6,8 +6,8 @@
 #include "scenes/scene_cube.h"
 #include "scenes/scene_empty.h"
 #include "scenes/scene_pixel_sim.h"
-#include "scenes/scene_texture.h"
 #include "scenes/scene_shapes.h"
+#include "scenes/scene_texture.h"
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
@@ -42,7 +42,11 @@ static void on_ui_function(struct nk_context *context, void *args) {
 }
 
 int main(void) {
+#ifdef VSYNC
+  GLFWwindow *window = graphics_init(1);
+#else
   GLFWwindow *window = graphics_init(0);
+#endif /* ifdef VSYNC */
   UI ui = ui_init(window);
 
   ScenePair scene_pairs[] = {

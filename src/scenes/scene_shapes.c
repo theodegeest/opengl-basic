@@ -41,7 +41,7 @@ static void on_update(void *obj, float delta_time) {
       0);
 
   ShapeBox box2 = shape_box_create(
-      500.0f, 250.0f, 100.0f, 100.0f, 2.0f,
+      450.0f, 350.0f, 100.0f, 100.0f, 2.0f,
       (Color){s_obj->color.r, s_obj->color.g, s_obj->color.b, s_obj->color.a},
       0);
 
@@ -165,8 +165,7 @@ Scene *scene_shapes_init() {
 
   // Create and bind a Index Buffer Object
   // obj->ib = index_buffer_create(indices, 6 * 3);
-  obj->ib = index_buffer_create_quad(total_number_of_vertices *
-                                     QUAD_NUMBER_OF_VERTICES);
+  obj->ib = index_buffer_create_quad(total_number_of_vertices);
 
   glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f, obj->proj);
 

@@ -6,6 +6,7 @@
 #include "../graphics/shader.h"
 #include "../graphics/texture.h"
 #include "../graphics/vertex_array.h"
+#include "../mesh/shape.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,13 +16,27 @@
 
 #define SIM_WIDTH 130
 #define SIM_HEIGHT 60
+#define SIM_CELL_SIZE 10
+
+#define SIM_CHUNK_SIZE 25
+#define SIM_CHUNK_WIDTH SIM_WIDTH / SIM_CHUNK_SIZE
+#define SIM_CHUNK_HEIGHT SIM_HEIGHT / SIM_CHUNK_SIZE
+#define SIM_CHUNK_SIZE_PIXEL SIM_CELL_SIZE * SIM_CHUNK_SIZE
+
+#define SIM_WIDTH_PIXEL SIM_WIDTH *SIM_CELL_SIZE
+#define SIM_HEIGHT_PIXEL SIM_HEIGHT *SIM_CELL_SIZE
 
 typedef struct {
-  VertexArray *va;
-  VertexBuffer *vb;
-  IndexBuffer *ib;
-  VertexBufferLayout *layout;
-  Shader *shader;
+  VertexArray *va_cells;
+  VertexBuffer *vb_cells;
+  IndexBuffer *ib_cells;
+  VertexBufferLayout *layout_cells;
+  VertexArray *va_chunks;
+  VertexBuffer *vb_chunks;
+  IndexBuffer *ib_chunks;
+  VertexBufferLayout *layout_chunks;
+  Shader *shader_cells;
+  Shader *shader_chunks;
   Texture *texture_air;
   Texture *texture_water;
   Texture *texture_sand;
@@ -361,9 +376,10 @@ static void on_update(void *obj, float delta_time) {
   //   }
   // }
 
+  vertex_array_bind(p_obj->va_cells);
   int total = SIM_WIDTH * SIM_HEIGHT;
   Quad *spawn_q =
-      vertex_buffer_quad_get(p_obj->vb, (total - SIM_WIDTH / 2) * 4);
+      vertex_buffer_quad_get(p_obj->vb_cells, (total - SIM_WIDTH / 2) * 4);
   quad_texture_id_set(spawn_q, 2);
 
   for (int i = 0; i < total; i++) {
@@ -375,11 +391,11 @@ static void on_update(void *obj, float delta_time) {
     //   printf("Could not get quad\n");
     // }
 
-    update_sim(p_obj->vb, x, y);
+    update_sim(p_obj->vb_cells, x, y);
     // quad_texture_id_set(current, 1.0f);
   }
 
-  vertex_buffer_flush(p_obj->vb);
+  vertex_buffer_flush(p_obj->vb_cells);
 }
 
 static void on_render(void *obj) {
@@ -388,7 +404,7 @@ static void on_render(void *obj) {
   renderer_clear(p_obj->renderer);
 
   // Use our shader program
-  shader_bind(p_obj->shader);
+  shader_bind(p_obj->shader_cells);
 
   texture_bind(p_obj->texture_air, 0);
   texture_bind(p_obj->texture_water, 1);
@@ -403,9 +419,10 @@ static void on_render(void *obj) {
     glm_mat4_mul(p_obj->proj, p_obj->view, mvp);
     glm_mat4_mul(mvp, model, mvp);
 
-    shader_uniform_set_mat4f(p_obj->shader, "u_MVP", mvp);
+    shader_uniform_set_mat4f(p_obj->shader_cells, "u_MVP", mvp);
 
-    renderer_draw(p_obj->renderer, p_obj->va, p_obj->vb, p_obj->shader);
+    renderer_draw(p_obj->renderer, p_obj->va_cells, p_obj->vb_cells,
+                  p_obj->shader_cells);
   }
 
   // {
@@ -423,6 +440,26 @@ static void on_render(void *obj) {
   //
   //   renderer_draw(c_obj->renderer, c_obj->va, c_obj->ib, c_obj->shader);
   // }
+
+  vertex_array_unbind();
+
+  // Draw chunks
+  shader_bind(p_obj->shader_chunks);
+
+  {
+    mat4 model;
+    glm_translate_make(model, (vec3){0.0f, 0.0f, 0.0f});
+    glm_translate(model, (vec3){p_obj->value_x, p_obj->value_y, 0.0f});
+
+    mat4 mvp;
+    glm_mat4_mul(p_obj->proj, p_obj->view, mvp);
+    glm_mat4_mul(mvp, model, mvp);
+
+    shader_uniform_set_mat4f(p_obj->shader_chunks, "u_MVP", mvp);
+
+    renderer_draw(p_obj->renderer, p_obj->va_chunks, p_obj->vb_chunks,
+                  p_obj->shader_chunks);
+  }
 
   vertex_array_unbind();
 }
@@ -464,11 +501,16 @@ static void on_free(void *scene) {
   Scene *scene_p = (Scene *)scene;
   PixelSimObj *obj = (PixelSimObj *)scene_p->obj;
 
-  vertex_array_free(obj->va);
-  vertex_buffer_free(obj->vb);
-  index_buffer_free(obj->ib);
-  vertex_buffer_layout_free(obj->layout);
-  shader_free(obj->shader);
+  vertex_array_free(obj->va_cells);
+  vertex_buffer_free(obj->vb_cells);
+  index_buffer_free(obj->ib_cells);
+  vertex_buffer_layout_free(obj->layout_cells);
+  vertex_array_free(obj->va_chunks);
+  vertex_buffer_free(obj->vb_chunks);
+  index_buffer_free(obj->ib_chunks);
+  vertex_buffer_layout_free(obj->layout_chunks);
+  shader_free(obj->shader_cells);
+  shader_free(obj->shader_chunks);
   texture_free(obj->texture_air);
   texture_free(obj->texture_water);
   texture_free(obj->texture_sand);
@@ -495,25 +537,28 @@ Scene *scene_pixel_sim_init() {
 
   renderer_set_clear_color(obj->renderer, (float[]){0.2f, 0.3f, 0.3f, 1.0f});
 
-  obj->shader = shader_create("resources/shaders/pixel-sim.glsl");
-  shader_bind(obj->shader);
+  // Cells setup
+
+  obj->shader_cells = shader_create("resources/shaders/pixel-sim-cell.glsl");
+  shader_bind(obj->shader_cells);
 
   // Create and bind a Vertex Array Object
-  obj->va = vertex_array_create();
+  obj->va_cells = vertex_array_create();
 
   // Create and bind a Vertex Buffer Object
-  obj->vb = vertex_buffer_create(SIM_WIDTH * SIM_HEIGHT * 4);
+  obj->vb_cells =
+      vertex_buffer_create(SIM_WIDTH * SIM_HEIGHT * QUAD_NUMBER_OF_VERTICES);
 
-  obj->layout = vertex_buffer_layout_create();
-  vertex_buffer_layout_push_float(obj->layout, 3);
-  vertex_buffer_layout_push_float(obj->layout, 4);
-  vertex_buffer_layout_push_float(obj->layout, 2);
-  vertex_buffer_layout_push_float(obj->layout, 1);
-  vertex_array_add_buffer(obj->va, obj->vb, obj->layout);
+  obj->layout_cells = vertex_buffer_layout_create();
+  vertex_buffer_layout_push_float(obj->layout_cells, 3);
+  vertex_buffer_layout_push_float(obj->layout_cells, 4);
+  vertex_buffer_layout_push_float(obj->layout_cells, 2);
+  vertex_buffer_layout_push_float(obj->layout_cells, 1);
+  vertex_array_add_buffer(obj->va_cells, obj->vb_cells, obj->layout_cells);
 
   // Create and bind a Index Buffer Object
   // obj->ib = index_buffer_create(indices, 6 * 3);
-  obj->ib = index_buffer_create_quad(SIM_WIDTH * SIM_HEIGHT);
+  obj->ib_cells = index_buffer_create_quad(SIM_WIDTH * SIM_HEIGHT);
 
   glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f, obj->proj);
 
@@ -530,9 +575,9 @@ Scene *scene_pixel_sim_init() {
   texture_bind(obj->texture_sand, 2);
 
   int samplers[3] = {0, 1, 2};
-  shader_uniform_set_1iv(obj->shader, "u_Texture", 3, samplers);
+  shader_uniform_set_1iv(obj->shader_cells, "u_Texture", 3, samplers);
 
-  vertex_buffer_clear(obj->vb);
+  vertex_buffer_clear(obj->vb_cells);
 
   int size = 10;
 
@@ -540,11 +585,63 @@ Scene *scene_pixel_sim_init() {
     for (int i = 0; i < SIM_WIDTH; i++) {
       Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size, size,
                            0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-      vertex_buffer_push_quad(obj->vb, &q);
+      vertex_buffer_push_quad(obj->vb_cells, &q);
     }
   }
 
-  vertex_buffer_flush(obj->vb);
+  vertex_buffer_flush(obj->vb_cells);
+
+  // Unbind the VBO and VAO
+  vertex_array_unbind();
+  vertex_buffer_unbind();
+  index_buffer_unbind();
+
+  // Chunks setup
+
+  obj->shader_chunks =
+      shader_create("resources/shaders/pixel-sim-chunk-border.glsl");
+  shader_bind(obj->shader_chunks);
+
+  // Create and bind a Vertex Array Object
+  obj->va_chunks = vertex_array_create();
+
+  // Create and bind a Vertex Buffer Object
+  obj->vb_chunks = vertex_buffer_create(SIM_CHUNK_WIDTH * SIM_CHUNK_HEIGHT *
+                                        SHAPE_BOX_NUMBER_OF_VERTICES);
+
+  obj->layout_chunks = vertex_buffer_layout_create();
+  vertex_buffer_layout_push_float(obj->layout_chunks, 3);
+  vertex_buffer_layout_push_float(obj->layout_chunks, 4);
+  vertex_buffer_layout_push_float(obj->layout_chunks, 2);
+  vertex_buffer_layout_push_float(obj->layout_chunks, 1);
+  vertex_array_add_buffer(obj->va_chunks, obj->vb_chunks, obj->layout_chunks);
+
+  // Create and bind a Index Buffer Object
+  // obj->ib = index_buffer_create(indices, 6 * 3);
+  obj->ib_chunks = index_buffer_create_quad(
+      (SIM_CHUNK_WIDTH * SIM_CHUNK_HEIGHT * SHAPE_BOX_NUMBER_OF_VERTICES));
+
+  glm_ortho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f, obj->proj);
+
+  glm_mat4_identity(obj->view);
+  glm_translate(obj->view, (vec3){0.0f, 0.0f, 0.0f});
+
+  vertex_buffer_clear(obj->vb_chunks);
+
+  for (int j = 0; j < SIM_CHUNK_HEIGHT; j++) {
+    for (int i = 0; i < SIM_CHUNK_WIDTH; i++) {
+      // Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size,
+      // size,
+      //                      0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+      ShapeBox box = shape_box_create(
+          50.0f + i * SIM_CHUNK_SIZE_PIXEL, 50.0f + j * SIM_CHUNK_SIZE_PIXEL,
+          SIM_CHUNK_SIZE_PIXEL, SIM_CHUNK_SIZE_PIXEL, 1, (Color){1, 0, 0, 1}, 0);
+      vertex_buffer_push(obj->vb_chunks, (Vertex *)&box,
+                         SHAPE_BOX_NUMBER_OF_VERTICES);
+    }
+  }
+
+  vertex_buffer_flush(obj->vb_chunks);
 
   // Unbind the VBO and VAO
   vertex_array_unbind();
