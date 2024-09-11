@@ -6,7 +6,8 @@
 #include "../../include/glad/glad.h"
 #include "debug.h"
 
-static unsigned int _check_boundaries(VertexBuffer *vb);
+static unsigned int _check_boundaries(VertexBuffer *vb,
+                                      unsigned int number_of_new_vertices);
 
 /******************************************************************************
                               PUBLIC FUNCTIONS                                *
@@ -22,6 +23,7 @@ VertexBuffer *vertex_buffer_create(int number_of_vertices) {
 
   vb->buffer = malloc(number_of_vertices * sizeof(Vertex));
   vb->size = 0;
+  vb->max_capacity = number_of_vertices * sizeof(Vertex);
 
   return vb;
 }
@@ -41,14 +43,28 @@ void vertex_buffer_flush(VertexBuffer *vertexBuffer) {
                          vertexBuffer->buffer));
 }
 
-void vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad quad) {
-  if (_check_boundaries(vertexBuffer)) {
-    // vertexBuffer->buffer[vertexBuffer->size++] = quad;
-    memcpy(&vertexBuffer->buffer[vertexBuffer->size], &quad, sizeof(Quad));
-    vertexBuffer->size += 4;
+void vertex_buffer_push(VertexBuffer *vb, Vertex *vertices,
+                        unsigned int number_of_vertices) {
+  if (_check_boundaries(vb, number_of_vertices)) {
+    memcpy(&vb->buffer[vb->size], vertices,
+           number_of_vertices * sizeof(Vertex));
+    vb->size += number_of_vertices;
   } else {
-    printf("[VertexBuffer Error] Buffer is full, could not push new Quad.\n");
+    printf(
+        "[VertexBuffer Error] Buffer is full, could not push new Vertices.\n");
   }
+}
+
+void vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad *quad) {
+  vertex_buffer_push(vertexBuffer, (Vertex *)quad, 4);
+  // if (_check_boundaries(vertexBuffer, 4)) {
+  //   // vertexBuffer->buffer[vertexBuffer->size++] = quad;
+  //   memcpy(&vertexBuffer->buffer[vertexBuffer->size], &quad, sizeof(Quad));
+  //   vertexBuffer->size += 4;
+  // } else {
+  //   printf("[VertexBuffer Error] Buffer is full, could not push new
+  //   Quad.\n");
+  // }
 }
 
 Quad *vertex_buffer_quad_get(VertexBuffer *vertexBuffer, unsigned int index) {
@@ -69,8 +85,9 @@ void vertex_buffer_unbind() { GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0)); }
 *******************************************************************************/
 
 // Returns 1 if new push is allowed, else it returns 0.
-static unsigned int _check_boundaries(VertexBuffer *vb) {
-  if (vb->size == BUFFER_MAX_CAPACITY) {
+static unsigned int _check_boundaries(VertexBuffer *vb,
+                                      unsigned int number_of_new_vertices) {
+  if ((vb->size + number_of_new_vertices) * sizeof(Vertex) > vb->max_capacity) {
     return 0;
   } else {
     return 1;

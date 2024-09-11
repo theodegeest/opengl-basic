@@ -44,7 +44,7 @@ static void on_update(void *obj, float delta_time) {
     for (int j = 0; j < NUMBER_HEIGHT; j++) {
       Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size, size,
                            0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-      vertex_buffer_push_quad(b_obj->vb, q);
+      vertex_buffer_push_quad(b_obj->vb, &q);
     }
   }
 

@@ -7,5 +7,6 @@
 #define WINDOW_HEIGHT 1000
 
 GLFWwindow *graphics_init(int vsync);
+void graphics_free(GLFWwindow *window);
 
 #endif // !GRAPHICS_H_

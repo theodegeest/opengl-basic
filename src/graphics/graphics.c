@@ -58,3 +58,8 @@ GLFWwindow *graphics_init(int vsync) {
 
   return window;
 }
+
+void graphics_free(GLFWwindow *window) {
+  glfwDestroyWindow(window);
+  glfwTerminate();
+}

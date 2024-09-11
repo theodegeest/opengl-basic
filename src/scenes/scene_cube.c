@@ -44,8 +44,8 @@ static void on_update(void *obj, float delta_time) {
                   (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
   // quad_print(left_quad);
 
-  vertex_buffer_push_quad(c_obj->vb, left_quad);
-  vertex_buffer_push_quad(c_obj->vb, right_quad);
+  vertex_buffer_push_quad(c_obj->vb, &left_quad);
+  vertex_buffer_push_quad(c_obj->vb, &right_quad);
 
   // printf("%f\n", c_obj->vb->buffer[4].ld.pos.x);
   // printf("%f\n", c_obj->vb->buffer[100].ld.pos.x);

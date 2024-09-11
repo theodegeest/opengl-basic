@@ -540,7 +540,7 @@ Scene *scene_pixel_sim_init() {
     for (int i = 0; i < SIM_WIDTH; i++) {
       Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size, size,
                            0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-      vertex_buffer_push_quad(obj->vb, q);
+      vertex_buffer_push_quad(obj->vb, &q);
     }
   }
 

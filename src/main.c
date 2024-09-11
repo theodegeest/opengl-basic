@@ -7,6 +7,7 @@
 #include "scenes/scene_empty.h"
 #include "scenes/scene_pixel_sim.h"
 #include "scenes/scene_texture.h"
+#include "scenes/scene_shapes.h"
 #include <GLFW/glfw3.h>
 #include <stdio.h>
 
@@ -48,6 +49,7 @@ int main(void) {
       {"Empty", &scene_empty_init},
       {"Clear Color", &scene_clear_color_init},
       {"Color", &scene_color_init},
+      {"Shapes", &scene_shapes_init},
       {"Texture", &scene_texture_init},
       {"Batch Rendering", &scene_batch_rendering_init},
       {"Cube", &scene_cube_init},
@@ -142,7 +144,7 @@ int main(void) {
 
   ui_free(ui);
 
-  glfwDestroyWindow(window);
-  glfwTerminate();
+  graphics_free(window);
+
   return 0;
 }
