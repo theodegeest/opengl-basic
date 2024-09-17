@@ -43,20 +43,22 @@ void vertex_buffer_flush(VertexBuffer *vertexBuffer) {
                          vertexBuffer->buffer));
 }
 
-void vertex_buffer_push(VertexBuffer *vb, Vertex *vertices,
-                        unsigned int number_of_vertices) {
+Vertex *vertex_buffer_push(VertexBuffer *vb, Vertex *vertices,
+                           unsigned int number_of_vertices) {
   if (_check_boundaries(vb, number_of_vertices)) {
-    memcpy(&vb->buffer[vb->size], vertices,
-           number_of_vertices * sizeof(Vertex));
+    unsigned int size = vb->size;
     vb->size += number_of_vertices;
+    return memcpy(&vb->buffer[size], vertices,
+                  number_of_vertices * sizeof(Vertex));
   } else {
     printf(
         "[VertexBuffer Error] Buffer is full, could not push new Vertices.\n");
+    return NULL;
   }
 }
 
-void vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad *quad) {
-  vertex_buffer_push(vertexBuffer, (Vertex *)quad, 4);
+Quad *vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad *quad) {
+  return (Quad *)vertex_buffer_push(vertexBuffer, (Vertex *)quad, 4);
   // if (_check_boundaries(vertexBuffer, 4)) {
   //   // vertexBuffer->buffer[vertexBuffer->size++] = quad;
   //   memcpy(&vertexBuffer->buffer[vertexBuffer->size], &quad, sizeof(Quad));
