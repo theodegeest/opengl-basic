@@ -1,4 +1,5 @@
 #include "index_buffer.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "../../include/glad/glad.h"
@@ -25,8 +26,10 @@ IndexBuffer *index_buffer_create_quad(int number_of_quads) {
   IndexBuffer *ib = malloc(sizeof(IndexBuffer));
 
   // Generate indices
+  //
 
-  unsigned int indices[number_of_quads * 6];
+  // unsigned int indices[number_of_quads * 6];
+  unsigned int *indices = malloc(number_of_quads * 6 * sizeof(unsigned int));
 
   unsigned int index_pattern[6] = {0, 1, 2, 2, 3, 0};
 
@@ -45,6 +48,8 @@ IndexBuffer *index_buffer_create_quad(int number_of_quads) {
                       GL_STATIC_DRAW));
 
   ib->count = number_of_quads;
+
+  free(indices);
 
   return ib;
 }

@@ -51,7 +51,10 @@ void ui_draw_gui(UI ui, Scene *scene,
   // here we set up the nk_window
   nk_glfw3_new_frame();
 
-  if (nk_begin(context, "Nuklear Window", nk_rect(0, 0, 200, 300),
+  float scene_time =
+      ui.perf_values.update_time + ui.perf_values.scene_render_time;
+
+  if (nk_begin(context, "Performance", nk_rect(0, 0, 220, 300),
                NK_WINDOW_BORDER | NK_WINDOW_TITLE | NK_WINDOW_MINIMIZABLE |
                    NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE)) {
     nk_layout_row_static(context, 15, 110, 2);
@@ -65,14 +68,32 @@ void ui_draw_gui(UI ui, Scene *scene,
     gcvt(ui.perf_values.frame_time, 8, string);
     nk_label(context, string, NK_TEXT_LEFT);
 
+    const float update_widths[] = {0.4f, 0.15f, 0.1f, 0.4025f};
+    nk_layout_row(context, NK_DYNAMIC, 15, 4, update_widths);
+    // nk_layout_row_static(context, 15, 50, 4);
+
     nk_label(context, "update time:", NK_TEXT_LEFT);
+    gcvt((int)((ui.perf_values.update_time / scene_time) * 100),
+         8, string);
+    nk_label(context, string, NK_TEXT_RIGHT);
+    nk_label(context, "%, ", NK_TEXT_LEFT);
     gcvt(ui.perf_values.update_time, 8, string);
     nk_label(context, string, NK_TEXT_LEFT);
 
+    const float render_widths[] = {0.4f, 0.15f, 0.1f, 0.4025f};
+    nk_layout_row(context, NK_DYNAMIC, 15, 4, render_widths);
+    // nk_layout_row_static(context, 15, 110, 2);
+
     nk_label(context, "render time:", NK_TEXT_LEFT);
+    gcvt((int)((ui.perf_values.scene_render_time / scene_time) *
+               100),
+         8, string);
+    nk_label(context, string, NK_TEXT_RIGHT);
+    nk_label(context, "%, ", NK_TEXT_LEFT);
     gcvt(ui.perf_values.scene_render_time, 8, string);
     nk_label(context, string, NK_TEXT_LEFT);
 
+    nk_layout_row_static(context, 15, 110, 2);
     nk_label(context, "ui render time:", NK_TEXT_LEFT);
     gcvt(ui.perf_values.ui_render_time, 8, string);
     nk_label(context, string, NK_TEXT_LEFT);

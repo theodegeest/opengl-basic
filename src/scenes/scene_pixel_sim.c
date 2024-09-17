@@ -15,9 +15,9 @@
 
 #include "../../include/Nuklear/nuklear.h"
 
-#define SIM_WIDTH (225 * 3)
-#define SIM_HEIGHT (150 * 3)
-#define SIM_CELL_SIZE 2
+#define SIM_WIDTH (225 * 5)
+#define SIM_HEIGHT (150 * 5)
+#define SIM_CELL_SIZE 1
 #define SIM_CELL_COUNT (SIM_WIDTH * SIM_HEIGHT)
 
 #define SIM_CHUNK_SIZE 25
@@ -269,10 +269,31 @@ static void set_type(int x, int y, Quad *q, SimType type) {
   quad_texture_id_set(q, type);
 }
 
+static void set_dirty(PixelSimObj *obj, int x, int y) {
+  chunk_get(obj, x, y)->dirty_bit = 1;
+}
+
+static void set_dirty_neighbors(PixelSimObj *obj, int x, int y) {
+  for (int local_y = y - 1; local_y <= y + 1; local_y++) {
+    if (local_y < 0 || local_y >= SIM_HEIGHT) {
+      continue;
+    }
+
+    for (int local_x = x - 1; local_x <= x + 1; local_x++) {
+      if (local_x < 0 || local_x >= SIM_WIDTH) {
+        continue;
+      }
+
+      set_dirty(obj, local_x, local_y);
+      // printf("in %d, %d\n", local_x, local_y);
+    }
+  }
+}
+
 static void set_type_and_dirty(PixelSimObj *obj, int x, int y, Quad *q,
                                SimType type) {
   set_type(x, y, q, type);
-  chunk_get(obj, x, y - 1)->dirty_bit = 1;
+  set_dirty(obj, x, y);
 }
 
 static float get_texture_id(SimType type) { return (float)type; }
@@ -286,12 +307,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   switch (type) {
   case TYPE_AIR:
     set_type(x, y, q1, TYPE_AIR);
-    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
+    set_type(x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_WATER:
     set_type(x, y, q1, TYPE_WATER);
-    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
+    set_type(x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_SAND:
@@ -301,12 +322,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
     switch (type) {
     case TYPE_AIR:
       set_type(x, y, q1, TYPE_AIR);
-      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
+      set_type(x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_WATER:
       set_type(x, y, q1, TYPE_WATER);
-      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
+      set_type(x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_SAND:
@@ -316,12 +337,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
       switch (type) {
       case TYPE_AIR:
         set_type(x, y, q1, TYPE_AIR);
-        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
+        set_type(x + 1, y - 1, q2, TYPE_SAND);
         changed = 1;
         break;
       case TYPE_WATER:
         set_type(x, y, q1, TYPE_WATER);
-        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
+        set_type(x + 1, y - 1, q2, TYPE_SAND);
         changed = 1;
         break;
       case TYPE_SAND:
@@ -339,6 +360,49 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   case TYPE_OUTOFBOUNDS:
   case TYPE_COUNT:
     break;
+  }
+
+  if (changed) {
+    unsigned int chunk_x = x % SIM_CHUNK_SIZE;
+    unsigned int chunk_y = y % SIM_CHUNK_SIZE;
+
+    if (chunk_x == 0 && x != 0) {
+      // left
+      set_dirty(obj, x - 1, y);
+      if (chunk_y == 0 && y != 0) {
+        // left and down
+        set_dirty(obj, x, y - 1);
+        set_dirty(obj, x - 1, y - 1);
+      } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
+        // left and up
+        set_dirty(obj, x, y + 1);
+        set_dirty(obj, x - 1, y + 1);
+      }
+    } else if (chunk_x == SIM_CHUNK_SIZE - 1 && x != SIM_WIDTH - 1) {
+      // right
+      set_dirty(obj, x + 1, y);
+      if (chunk_y == 0 && y != 0) {
+        // right and down
+        set_dirty(obj, x, y - 1);
+        set_dirty(obj, x + 1, y - 1);
+      } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
+        // right and up
+        set_dirty(obj, x, y + 1);
+        set_dirty(obj, x + 1, y + 1);
+      }
+    } else if (chunk_y == 0 && y != 0) {
+      // down
+      set_dirty(obj, x, y - 1);
+    } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
+      // up
+      set_dirty(obj, x, y + 1);
+    }
+
+    // if (chunk_x == 0 || chunk_x == SIM_CHUNK_SIZE - 1 || chunk_y == 0 ||
+    //     chunk_y == SIM_CHUNK_SIZE - 1) {
+    //   // printf("edge %d, %d\n", chunk_x, chunk_y);
+    //   set_dirty_neighbors(obj, x, y);
+    // }
   }
   return changed;
 }
@@ -444,9 +508,8 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   // }
 
   vertex_array_bind(p_obj->va_cells);
-  int total = SIM_WIDTH * SIM_HEIGHT;
-  Quad *spawn_q = cell_get(p_obj, SIM_WIDTH / 2, SIM_HEIGHT - 1);
-  quad_texture_id_set(spawn_q, 2);
+  // Quad *spawn_q = cell_get(p_obj, SIM_WIDTH / 2, SIM_HEIGHT - 1);
+  // quad_texture_id_set(spawn_q, 2);
 
   for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
        chunk_id_y++) {
@@ -454,12 +517,12 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
          chunk_id_x++) {
       unsigned int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) + chunk_id_x;
       Chunk *chunk = &p_obj->chunks[chunk_id];
-      ShapeBox *chunk_box = (ShapeBox *)vertex_buffer_get(
-          p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
-          SHAPE_BOX_NUMBER_OF_VERTICES);
 
       chunk->had_changed = chunk->dirty_bit;
       if (chunk->dirty_bit) {
+        ShapeBox *chunk_box = (ShapeBox *)vertex_buffer_get(
+            p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+            SHAPE_BOX_NUMBER_OF_VERTICES);
         int chunk_changed = 0;
         for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE; local_y++) {
           unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
@@ -698,7 +761,7 @@ Scene *scene_pixel_sim_init() {
   obj->value_x = 0.0f;
   obj->value_y = 0.0f;
 
-  obj->show_chunks = 1;
+  obj->show_chunks = 0;
 
   obj->renderer = renderer_create();
 
