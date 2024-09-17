@@ -14,9 +14,9 @@
 
 #include "../../include/Nuklear/nuklear.h"
 
-#define SIM_WIDTH 125
-#define SIM_HEIGHT 75
-#define SIM_CELL_SIZE 10
+#define SIM_WIDTH 225
+#define SIM_HEIGHT 150
+#define SIM_CELL_SIZE 5
 #define SIM_CELL_COUNT (SIM_WIDTH * SIM_HEIGHT)
 
 #define SIM_CHUNK_SIZE 25
@@ -31,6 +31,7 @@
 
 typedef struct {
   int dirty_bit;
+  int had_changed;
   Quad *first_element;
 } Chunk;
 
@@ -104,9 +105,9 @@ typedef struct {
 
 // TODO: Maybe optimize the next two functions
 static Chunk *chunk_get(PixelSimObj *obj, int x, int y) {
-  if (x < 0 || x >= SIM_WIDTH || y < 0 || y >= SIM_HEIGHT) {
-    return NULL;
-  }
+  // if (x < 0 || x >= SIM_WIDTH || y < 0 || y >= SIM_HEIGHT) {
+  //   return NULL;
+  // }
   int chunk_id_x = x / SIM_CHUNK_SIZE;
   int chunk_id_y = y / SIM_CHUNK_SIZE;
   // int cell_id = (y * SIM_WIDTH) + x;
@@ -266,18 +267,24 @@ static void set_type(int x, int y, Quad *q, SimType type) {
 
 static float get_texture_id(SimType type) { return (float)type; }
 
-static void update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
+// Returns 0 when no changes, returns 1 when something has changed
+static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   Quad *q2 = cell_get(obj, x, y - 1);
+  unsigned char changed = 0;
   // Check under
   SimType type = get_type(x, y - 1, q2);
   switch (type) {
   case TYPE_AIR:
     set_type(x, y, q1, TYPE_AIR);
     set_type(x, y - 1, q2, TYPE_SAND);
+    chunk_get(obj, x, y - 1)->dirty_bit = 1;
+    changed = 1;
     break;
   case TYPE_WATER:
     set_type(x, y, q1, TYPE_WATER);
     set_type(x, y - 1, q2, TYPE_SAND);
+    chunk_get(obj, x, y - 1)->dirty_bit = 1;
+    changed = 1;
     break;
   case TYPE_SAND:
     // Check left
@@ -287,10 +294,14 @@ static void update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
     case TYPE_AIR:
       set_type(x, y, q1, TYPE_AIR);
       set_type(x - 1, y - 1, q2, TYPE_SAND);
+      chunk_get(obj, x - 1, y - 1)->dirty_bit = 1;
+      changed = 1;
       break;
     case TYPE_WATER:
       set_type(x, y, q1, TYPE_WATER);
       set_type(x - 1, y - 1, q2, TYPE_SAND);
+      chunk_get(obj, x - 1, y - 1)->dirty_bit = 1;
+      changed = 1;
       break;
     case TYPE_SAND:
       // Check right
@@ -300,10 +311,14 @@ static void update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
       case TYPE_AIR:
         set_type(x, y, q1, TYPE_AIR);
         set_type(x + 1, y - 1, q2, TYPE_SAND);
+        chunk_get(obj, x + 1, y - 1)->dirty_bit = 1;
+        changed = 1;
         break;
       case TYPE_WATER:
         set_type(x, y, q1, TYPE_WATER);
         set_type(x + 1, y - 1, q2, TYPE_SAND);
+        chunk_get(obj, x + 1, y - 1)->dirty_bit = 1;
+        changed = 1;
         break;
       case TYPE_SAND:
         break;
@@ -321,9 +336,11 @@ static void update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   case TYPE_COUNT:
     break;
   }
+  return changed;
 }
 
-static void update_sim(PixelSimObj *obj, int x, int y) {
+// Returns 0 when no changes, returns 1 when something has changed
+static unsigned char update_sim(PixelSimObj *obj, int x, int y) {
   // UpdateAction action = find_action(get_neighborhood(vb, x, y));
   // printf("%d\n", action);
 
@@ -382,6 +399,7 @@ static void update_sim(PixelSimObj *obj, int x, int y) {
   //   break;
   // }
 
+  unsigned char changed = 0;
   Quad *q = cell_get(obj, x, y);
   if (q == NULL) {
     printf("DEBUG, %d, %d\n", x, y);
@@ -393,12 +411,14 @@ static void update_sim(PixelSimObj *obj, int x, int y) {
   case TYPE_WATER:
     break;
   case TYPE_SAND:
-    update_sim_sand(obj, x, y, q);
+    changed = update_sim_sand(obj, x, y, q);
     break;
   case TYPE_OUTOFBOUNDS:
   case TYPE_COUNT:
     break;
   }
+
+  return changed;
 }
 
 static void on_update(void *obj, float delta_time) {
@@ -424,20 +444,79 @@ static void on_update(void *obj, float delta_time) {
   Quad *spawn_q = cell_get(p_obj, SIM_WIDTH / 2, SIM_HEIGHT - 1);
   quad_texture_id_set(spawn_q, 2);
 
-  for (int i = 0; i < total; i++) {
-    int x = i % SIM_WIDTH;
-    int y = i / SIM_WIDTH;
+  for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
+       chunk_id_y++) {
+    for (unsigned int chunk_id_x = 0; chunk_id_x < SIM_CHUNK_WIDTH;
+         chunk_id_x++) {
+      unsigned int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) + chunk_id_x;
+      Chunk *chunk = &p_obj->chunks[chunk_id];
+      ShapeBox *chunk_box = (ShapeBox *)vertex_buffer_get(
+          p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+          SHAPE_BOX_NUMBER_OF_VERTICES);
 
-    // Quad *current = vertex_buffer_quad_get(p_obj->vb, i);
-    // if (current == NULL) {
-    //   printf("Could not get quad\n");
-    // }
-
-    update_sim(p_obj, x, y);
-    // quad_texture_id_set(current, 1.0f);
+      chunk->had_changed = chunk->dirty_bit;
+      if (chunk->dirty_bit) {
+        int chunk_changed = 0;
+        for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE; local_y++) {
+          unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
+          for (unsigned int local_x = 0; local_x < SIM_CHUNK_SIZE; local_x++) {
+            unsigned int x = (chunk_id_x * SIM_CHUNK_SIZE) + local_x;
+            unsigned char changed = update_sim(p_obj, x, y);
+            if (changed) {
+              // printf("Changed -> x: %d, y: %d\n", x, y);
+              chunk_changed = 1;
+            }
+          }
+        }
+        chunk->dirty_bit = chunk_changed;
+        if (chunk_changed) {
+          shape_box_color_set(chunk_box, (Color){1, 0, 0, 1});
+          // printf("Box red\n");
+        } else {
+          shape_box_color_set(chunk_box, (Color){0, 0, 0, 1});
+          // printf("Box black\n");
+        }
+      }
+    }
   }
 
-  vertex_buffer_flush(p_obj->vb_cells);
+  for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
+       chunk_id_y++) {
+    for (unsigned int chunk_id_x = 0; chunk_id_x < SIM_CHUNK_WIDTH;
+         chunk_id_x++) {
+      unsigned int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) + chunk_id_x;
+      Chunk *chunk = &p_obj->chunks[chunk_id];
+      if (chunk->had_changed) {
+        unsigned int index =
+            chunk_id * SIM_CHUNK_CELL_COUNT * QUAD_NUMBER_OF_VERTICES;
+        unsigned int number_of_vertices =
+            SIM_CHUNK_CELL_COUNT * QUAD_NUMBER_OF_VERTICES;
+
+        // printf("chunk_id: %d, index: %d, number_of_vertices: %d\n", chunk_id,
+        //        index, number_of_vertices);
+        vertex_buffer_flush_part(p_obj->vb_cells, index, number_of_vertices);
+      }
+    }
+  }
+
+  // for (int i = 0; i < total; i++) {
+  //   int x = i % SIM_WIDTH;
+  //   int y = i / SIM_WIDTH;
+  //
+  //   // Quad *current = vertex_buffer_quad_get(p_obj->vb, i);
+  //   // if (current == NULL) {
+  //   //   printf("Could not get quad\n");
+  //   // }
+  //
+  //   unsigned char changed = update_sim(p_obj, x, y);
+  //   if (changed) {
+  //     printf("Changed -> x: %d, y: %d\n", x, y);
+  //   }
+  //   // quad_texture_id_set(current, 1.0f);
+  // }
+
+  // vertex_buffer_flush(p_obj->vb_cells);
+  vertex_buffer_flush(p_obj->vb_chunks);
 }
 
 static void on_render(void *obj) {
@@ -583,7 +662,7 @@ Scene *scene_pixel_sim_init() {
   obj->value_x = 0.0f;
   obj->value_y = 0.0f;
 
-  obj->show_chunks = 0;
+  obj->show_chunks = 1;
 
   obj->renderer = renderer_create();
 
@@ -639,6 +718,8 @@ Scene *scene_pixel_sim_init() {
 
   for (int chunk_id = 0; chunk_id < SIM_CHUNK_COUNT; chunk_id++) {
     Chunk *current_chunk = &obj->chunks[chunk_id];
+    current_chunk->dirty_bit = 1;
+    current_chunk->had_changed = 1;
     int chunk_x_location = chunk_id % SIM_CHUNK_WIDTH;
     int chunk_y_location = chunk_id / SIM_CHUNK_WIDTH;
     Quad *first_element = NULL;

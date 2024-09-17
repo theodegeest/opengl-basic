@@ -46,3 +46,10 @@ void quad_texture_id_set(Quad *q, float texture_id) {
   q->ru.texture_id = texture_id;
   q->rd.texture_id = texture_id;
 }
+
+void quad_color_set(Quad *q, Color color) {
+  q->ld.color = color;
+  q->lu.color = color;
+  q->ru.color = color;
+  q->rd.color = color;
+}

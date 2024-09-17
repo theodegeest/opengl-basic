@@ -14,3 +14,10 @@ ShapeBox shape_box_create(float x, float y, float width, float height,
 
   return (ShapeBox){left, up, right, down};
 }
+
+void shape_box_color_set(ShapeBox *sb, Color color) {
+  quad_color_set(&sb->left, color);
+  quad_color_set(&sb->up, color);
+  quad_color_set(&sb->right, color);
+  quad_color_set(&sb->down, color);
+}

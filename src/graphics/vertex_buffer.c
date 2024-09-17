@@ -43,6 +43,14 @@ void vertex_buffer_flush(VertexBuffer *vertexBuffer) {
                          vertexBuffer->buffer));
 }
 
+void vertex_buffer_flush_part(VertexBuffer *vertexBuffer, unsigned int index,
+                              unsigned int number_of_vertices) {
+  GLCall(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer->id));
+  GLCall(glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vertex),
+                         number_of_vertices * sizeof(Vertex),
+                         &vertexBuffer->buffer[index]));
+}
+
 Vertex *vertex_buffer_push(VertexBuffer *vb, Vertex *vertices,
                            unsigned int number_of_vertices) {
   if (_check_boundaries(vb, number_of_vertices)) {
@@ -55,6 +63,16 @@ Vertex *vertex_buffer_push(VertexBuffer *vb, Vertex *vertices,
         "[VertexBuffer Error] Buffer is full, could not push new Vertices.\n");
     return NULL;
   }
+}
+
+// TODO: Use size of each element
+Vertex *vertex_buffer_get(VertexBuffer *vb, unsigned int index,
+                          unsigned int number_of_vertices) {
+  if (index + number_of_vertices <= vb->size) {
+    return &vb->buffer[index];
+  }
+
+  return NULL;
 }
 
 Quad *vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad *quad) {
@@ -70,11 +88,12 @@ Quad *vertex_buffer_push_quad(VertexBuffer *vertexBuffer, Quad *quad) {
 }
 
 Quad *vertex_buffer_quad_get(VertexBuffer *vertexBuffer, unsigned int index) {
-  if (index < vertexBuffer->size) {
-    return (Quad *)&vertexBuffer->buffer[index];
-  }
-
-  return NULL;
+  return (Quad *)vertex_buffer_get(vertexBuffer, index, 4);
+  // if (index < vertexBuffer->size) {
+  //   return (Quad *)&vertexBuffer->buffer[index];
+  // }
+  //
+  // return NULL;
 }
 
 void vertex_buffer_bind(VertexBuffer *vertexBuffer) {
