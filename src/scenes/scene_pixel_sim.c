@@ -15,9 +15,9 @@
 
 #include "../../include/Nuklear/nuklear.h"
 
-#define SIM_WIDTH (225 * 5)
-#define SIM_HEIGHT (150 * 5)
-#define SIM_CELL_SIZE 1
+#define SIM_WIDTH (25 * 15)
+#define SIM_HEIGHT (25 * 15)
+#define SIM_CELL_SIZE 2
 #define SIM_CELL_COUNT (SIM_WIDTH * SIM_HEIGHT)
 
 #define SIM_CHUNK_SIZE 25

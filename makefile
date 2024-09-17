@@ -15,7 +15,7 @@ $(shell mkdir -p obj bin)
 
 all: $(target)
 
-debug: CFLAGS = -Wall -g
+debug: CFLAGS = -Wall -g -O0
 debug: clean
 debug: $(target)
 
@@ -40,5 +40,4 @@ release: CFLAGS = -Wall -O3
 release: clean
 release: $(target)
 
-cleanmake: clean
-cleanmake: $(target)
+dev: all
