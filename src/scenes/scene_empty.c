@@ -1,5 +1,5 @@
-#include "scene_empty.h"
 #include "../../include/glad/glad.h"
+#include "scene_empty.h"
 #include "../graphics/renderer.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
@@ -11,7 +11,7 @@ typedef struct {
   Renderer *renderer;
 } ClearColorObj;
 
-static void on_update(void *obj, float delta_time) {
+static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   // printf("Clear Color On Update\n");
 }
 

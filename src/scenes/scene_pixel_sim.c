@@ -1,5 +1,5 @@
-#include "scene_pixel_sim.h"
 #include "../../include/glad/glad.h"
+
 #include "../graphics/graphics.h"
 #include "../graphics/index_buffer.h"
 #include "../graphics/renderer.h"
@@ -7,6 +7,7 @@
 #include "../graphics/texture.h"
 #include "../graphics/vertex_array.h"
 #include "../mesh/shape.h"
+#include "scene_pixel_sim.h"
 #include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,9 +15,9 @@
 
 #include "../../include/Nuklear/nuklear.h"
 
-#define SIM_WIDTH 225
-#define SIM_HEIGHT 150
-#define SIM_CELL_SIZE 5
+#define SIM_WIDTH (225 * 3)
+#define SIM_HEIGHT (150 * 3)
+#define SIM_CELL_SIZE 2
 #define SIM_CELL_COUNT (SIM_WIDTH * SIM_HEIGHT)
 
 #define SIM_CHUNK_SIZE 25
@@ -28,6 +29,9 @@
 
 #define SIM_WIDTH_PIXEL (SIM_WIDTH * SIM_CELL_SIZE)
 #define SIM_HEIGHT_PIXEL (SIM_HEIGHT * SIM_CELL_SIZE)
+
+#define HORIZONTAL_OFFSET ((WINDOW_WIDTH / 2.0f) - (SIM_WIDTH_PIXEL / 2.0f))
+#define VERTICAL_OFFSET 50.0f
 
 typedef struct {
   int dirty_bit;
@@ -265,6 +269,12 @@ static void set_type(int x, int y, Quad *q, SimType type) {
   quad_texture_id_set(q, type);
 }
 
+static void set_type_and_dirty(PixelSimObj *obj, int x, int y, Quad *q,
+                               SimType type) {
+  set_type(x, y, q, type);
+  chunk_get(obj, x, y - 1)->dirty_bit = 1;
+}
+
 static float get_texture_id(SimType type) { return (float)type; }
 
 // Returns 0 when no changes, returns 1 when something has changed
@@ -276,14 +286,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   switch (type) {
   case TYPE_AIR:
     set_type(x, y, q1, TYPE_AIR);
-    set_type(x, y - 1, q2, TYPE_SAND);
-    chunk_get(obj, x, y - 1)->dirty_bit = 1;
+    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_WATER:
     set_type(x, y, q1, TYPE_WATER);
-    set_type(x, y - 1, q2, TYPE_SAND);
-    chunk_get(obj, x, y - 1)->dirty_bit = 1;
+    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_SAND:
@@ -293,14 +301,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
     switch (type) {
     case TYPE_AIR:
       set_type(x, y, q1, TYPE_AIR);
-      set_type(x - 1, y - 1, q2, TYPE_SAND);
-      chunk_get(obj, x - 1, y - 1)->dirty_bit = 1;
+      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_WATER:
       set_type(x, y, q1, TYPE_WATER);
-      set_type(x - 1, y - 1, q2, TYPE_SAND);
-      chunk_get(obj, x - 1, y - 1)->dirty_bit = 1;
+      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_SAND:
@@ -310,14 +316,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
       switch (type) {
       case TYPE_AIR:
         set_type(x, y, q1, TYPE_AIR);
-        set_type(x + 1, y - 1, q2, TYPE_SAND);
-        chunk_get(obj, x + 1, y - 1)->dirty_bit = 1;
+        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
         changed = 1;
         break;
       case TYPE_WATER:
         set_type(x, y, q1, TYPE_WATER);
-        set_type(x + 1, y - 1, q2, TYPE_SAND);
-        chunk_get(obj, x + 1, y - 1)->dirty_bit = 1;
+        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
         changed = 1;
         break;
       case TYPE_SAND:
@@ -421,7 +425,7 @@ static unsigned char update_sim(PixelSimObj *obj, int x, int y) {
   return changed;
 }
 
-static void on_update(void *obj, float delta_time) {
+static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   PixelSimObj *p_obj = (PixelSimObj *)obj;
   // printf("Clear Color On Update\n");
 
@@ -475,6 +479,38 @@ static void on_update(void *obj, float delta_time) {
         } else {
           shape_box_color_set(chunk_box, (Color){0, 0, 0, 1});
           // printf("Box black\n");
+        }
+      }
+    }
+  }
+
+  double xpos, ypos;
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    double sim_x = xpos - HORIZONTAL_OFFSET;
+    double sim_y = (WINDOW_HEIGHT - ypos) - VERTICAL_OFFSET;
+
+    if (sim_x >= 0 && sim_x < SIM_WIDTH_PIXEL && sim_y >= 0 &&
+        sim_y < SIM_HEIGHT_PIXEL) {
+      unsigned int center_x = ((int)sim_x) / SIM_CELL_SIZE;
+      unsigned int center_y = ((int)sim_y) / SIM_CELL_SIZE;
+      // printf("%u, %u\n", x, y);
+
+      int effect_radius = 5;
+      for (int y = center_y - effect_radius; y < center_y + effect_radius;
+           y++) {
+        if (y < 0 || y >= SIM_HEIGHT) {
+          continue;
+        }
+        for (int x = center_x - effect_radius; x < center_x + effect_radius;
+             x++) {
+          if (x < 0 || x >= SIM_WIDTH) {
+            continue;
+          }
+
+          Quad *q = cell_get(p_obj, x, y);
+          set_type_and_dirty(p_obj, x, y, q, TYPE_SAND);
         }
       }
     }
@@ -668,9 +704,9 @@ Scene *scene_pixel_sim_init() {
 
   renderer_set_clear_color(obj->renderer, (float[]){0.2f, 0.3f, 0.3f, 1.0f});
 
-  const float horizontal_offset =
-      (WINDOW_WIDTH / 2.0f) - (SIM_WIDTH_PIXEL / 2.0f);
-  const float vertical_offset = 50.0f;
+  // const float horizontal_offset =
+  //     (WINDOW_WIDTH / 2.0f) - (SIM_WIDTH_PIXEL / 2.0f);
+  // const float vertical_offset = 50.0f;
 
   obj->chunks = calloc(SIM_CHUNK_COUNT, sizeof(Chunk));
 
@@ -732,8 +768,8 @@ Scene *scene_pixel_sim_init() {
         int chunk_horizontal_offset =
             chunk_x_location * SIM_CHUNK_SIZE * SIM_CELL_SIZE;
         Quad q = quad_create(
-            horizontal_offset + chunk_horizontal_offset + x * SIM_CELL_SIZE,
-            vertical_offset + chunk_vertical_offset + y * SIM_CELL_SIZE, 0.0f,
+            HORIZONTAL_OFFSET + chunk_horizontal_offset + x * SIM_CELL_SIZE,
+            VERTICAL_OFFSET + chunk_vertical_offset + y * SIM_CELL_SIZE, 0.0f,
             SIM_CELL_SIZE, SIM_CELL_SIZE, 0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f},
             0);
         Quad *element = vertex_buffer_push_quad(obj->vb_cells, &q);
@@ -801,8 +837,8 @@ Scene *scene_pixel_sim_init() {
       // size,
       //                      0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
       ShapeBox box = shape_box_create(
-          horizontal_offset + i * SIM_CHUNK_SIZE_PIXEL,
-          50.0f + j * SIM_CHUNK_SIZE_PIXEL, SIM_CHUNK_SIZE_PIXEL,
+          HORIZONTAL_OFFSET + i * SIM_CHUNK_SIZE_PIXEL,
+          VERTICAL_OFFSET + j * SIM_CHUNK_SIZE_PIXEL, SIM_CHUNK_SIZE_PIXEL,
           SIM_CHUNK_SIZE_PIXEL, 1, (Color){1, 0, 0, 1}, 0);
       vertex_buffer_push(obj->vb_chunks, (Vertex *)&box,
                          SHAPE_BOX_NUMBER_OF_VERTICES);

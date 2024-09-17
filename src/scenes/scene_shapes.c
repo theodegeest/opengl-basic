@@ -1,5 +1,5 @@
-#include "scene_shapes.h"
 #include "../../include/glad/glad.h"
+#include "scene_shapes.h"
 #include "../graphics/graphics.h"
 #include "../graphics/index_buffer.h"
 #include "../graphics/renderer.h"
@@ -24,7 +24,7 @@ typedef struct {
   mat4 view;
 } ShapesObj;
 
-static void on_update(void *obj, float delta_time) {
+static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   ShapesObj *s_obj = (ShapesObj *)obj;
   // printf("Clear shapes On Update\n");
 

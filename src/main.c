@@ -91,7 +91,7 @@ int main(void) {
     timer_start(frame_time);
 
     timer_start(update_time);
-    scene_on_update(scene, delta_time);
+    scene_on_update(scene, delta_time, window);
     timer_stop(update_time);
 
     GLCall(glEnable(GL_BLEND));

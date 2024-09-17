@@ -1,5 +1,5 @@
-#include "scene_batch_rendering.h"
 #include "../../include/glad/glad.h"
+#include "scene_batch_rendering.h"
 #include "../graphics/index_buffer.h"
 #include "../graphics/renderer.h"
 #include "../graphics/shader.h"
@@ -31,7 +31,7 @@ typedef struct {
 #define NUMBER_HEIGHT 50
 
 
-static void on_update(void *obj, float delta_time) {
+static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   BatchRenderingObj *b_obj = (BatchRenderingObj *)obj;
   // printf("Clear Color On Update\n");
 

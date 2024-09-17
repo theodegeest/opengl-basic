@@ -1,7 +1,7 @@
 #include "scene.h"
 
-void scene_on_update(Scene *scene, float delta_time) {
-  scene->on_update(scene->obj, delta_time);
+void scene_on_update(Scene *scene, float delta_time, GLFWwindow *window) {
+  scene->on_update(scene->obj, delta_time, window);
 }
 
 void scene_on_render(Scene *scene) {
