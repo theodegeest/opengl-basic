@@ -13,5 +13,7 @@ ShapeBox shape_box_create(float x, float y, float width, float height,
                           float thickness, Color color, float texture_id);
 
 void shape_box_color_set(ShapeBox *sb, Color color);
+void shape_box_move(ShapeBox *sb, float x, float y, float width,
+                              float height);
 
 #endif // !SHAPE_H_

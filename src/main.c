@@ -130,7 +130,7 @@ int main(void) {
     ui.perf_values.scene_render_time = timer_elapsed(scene_render_time);
     ui.perf_values.ui_render_time = timer_elapsed(ui_render_time);
 
-    // int target_fps = 10;
+    // int target_fps = 2;
     // long target_frame_time = 1000000000 / target_fps;
     // struct timespec delay;
     // delay.tv_sec = target_frame_time / 1000000000L;

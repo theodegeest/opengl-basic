@@ -2,8 +2,8 @@
 
 #include <stdio.h>
 
-Quad quad_create(float x, float y, float z, float width, float height, float depth,
-                 Color color, float texture_id) {
+Quad quad_create(float x, float y, float z, float width, float height,
+                 float depth, Color color, float texture_id) {
   Vertex ld;
   ld.pos = (Vec3){x, y, z};
   ld.color = color;
@@ -36,9 +36,7 @@ void quad_print(Quad quad) {
          quad.rd.pos.x - quad.ld.pos.x, quad.lu.pos.y - quad.ld.pos.y);
 }
 
-float quad_texture_id_get(Quad *q) {
-  return q->ld.texture_id;
-}
+float quad_texture_id_get(Quad *q) { return q->ld.texture_id; }
 
 void quad_texture_id_set(Quad *q, float texture_id) {
   q->ld.texture_id = texture_id;
@@ -52,4 +50,12 @@ void quad_color_set(Quad *q, Color color) {
   q->lu.color = color;
   q->ru.color = color;
   q->rd.color = color;
+}
+
+void quad_move(Quad *q, float x, float y, float z, float width, float height,
+               float depth) {
+  q->ld.pos = (Vec3){x, y, z};
+  q->lu.pos = (Vec3){x, y + height, z};
+  q->ru.pos = (Vec3){x + width, y + height, z + depth};
+  q->rd.pos = (Vec3){x + width, y, z + depth};
 }

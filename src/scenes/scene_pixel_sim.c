@@ -15,7 +15,7 @@
 
 #include "../../include/Nuklear/nuklear.h"
 
-#define SIM_WIDTH (25 * 15)
+#define SIM_WIDTH (25 * 20)
 #define SIM_HEIGHT (25 * 15)
 #define SIM_CELL_SIZE 2
 #define SIM_CELL_COUNT (SIM_WIDTH * SIM_HEIGHT)
@@ -37,6 +37,7 @@ typedef struct {
   int dirty_bit;
   int had_changed;
   Quad *first_element;
+  int min_x, max_x, min_y, max_y;
 } Chunk;
 
 typedef struct {
@@ -48,8 +49,13 @@ typedef struct {
   VertexBuffer *vb_chunks;
   IndexBuffer *ib_chunks;
   VertexBufferLayout *layout_chunks;
+  VertexArray *va_chunks_dirty_rect;
+  VertexBuffer *vb_chunks_dirty_rect;
+  IndexBuffer *ib_chunks_dirty_rect;
+  VertexBufferLayout *layout_chunks_dirty_rect;
   Shader *shader_cells;
   Shader *shader_chunks;
+  Shader *shader_chunks_dirty_rect;
   Texture *texture_air;
   Texture *texture_water;
   Texture *texture_sand;
@@ -219,6 +225,9 @@ InstructionNode *instructions;
 //
 //   return ACTION_NONE; // Default action if no match is found
 // }
+static char check_boundaries(int x, int y) {
+  return x >= 0 && x < SIM_WIDTH && y >= 0 && y < SIM_HEIGHT;
+}
 
 static SimType get_type_from_texture_id(float texture_id) {
   return (SimType)texture_id;
@@ -269,8 +278,27 @@ static void set_type(int x, int y, Quad *q, SimType type) {
   quad_texture_id_set(q, type);
 }
 
+void keep_active(Chunk *chunk, int x, int y) {
+  if (chunk->min_x > x) {
+    chunk->min_x = x;
+  }
+  if (chunk->max_x <= x) {
+    chunk->max_x = x + 1;
+  }
+  if (chunk->min_y > y) {
+    chunk->min_y = y;
+  }
+  if (chunk->max_y <= y) {
+    chunk->max_y = y + 1;
+  }
+}
+
 static void set_dirty(PixelSimObj *obj, int x, int y) {
-  chunk_get(obj, x, y)->dirty_bit = 1;
+  if (check_boundaries(x, y)) {
+    Chunk *chunk = chunk_get(obj, x, y);
+    chunk->dirty_bit = 1;
+    keep_active(chunk, x, y);
+  }
 }
 
 static void set_dirty_neighbors(PixelSimObj *obj, int x, int y) {
@@ -307,12 +335,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   switch (type) {
   case TYPE_AIR:
     set_type(x, y, q1, TYPE_AIR);
-    set_type(x, y - 1, q2, TYPE_SAND);
+    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_WATER:
     set_type(x, y, q1, TYPE_WATER);
-    set_type(x, y - 1, q2, TYPE_SAND);
+    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_SAND:
@@ -322,12 +350,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
     switch (type) {
     case TYPE_AIR:
       set_type(x, y, q1, TYPE_AIR);
-      set_type(x - 1, y - 1, q2, TYPE_SAND);
+      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_WATER:
       set_type(x, y, q1, TYPE_WATER);
-      set_type(x - 1, y - 1, q2, TYPE_SAND);
+      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_SAND:
@@ -337,12 +365,12 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
       switch (type) {
       case TYPE_AIR:
         set_type(x, y, q1, TYPE_AIR);
-        set_type(x + 1, y - 1, q2, TYPE_SAND);
+        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
         changed = 1;
         break;
       case TYPE_WATER:
         set_type(x, y, q1, TYPE_WATER);
-        set_type(x + 1, y - 1, q2, TYPE_SAND);
+        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
         changed = 1;
         break;
       case TYPE_SAND:
@@ -363,40 +391,44 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   }
 
   if (changed) {
-    unsigned int chunk_x = x % SIM_CHUNK_SIZE;
-    unsigned int chunk_y = y % SIM_CHUNK_SIZE;
-
-    if (chunk_x == 0 && x != 0) {
-      // left
-      set_dirty(obj, x - 1, y);
-      if (chunk_y == 0 && y != 0) {
-        // left and down
-        set_dirty(obj, x, y - 1);
-        set_dirty(obj, x - 1, y - 1);
-      } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
-        // left and up
-        set_dirty(obj, x, y + 1);
-        set_dirty(obj, x - 1, y + 1);
-      }
-    } else if (chunk_x == SIM_CHUNK_SIZE - 1 && x != SIM_WIDTH - 1) {
-      // right
-      set_dirty(obj, x + 1, y);
-      if (chunk_y == 0 && y != 0) {
-        // right and down
-        set_dirty(obj, x, y - 1);
-        set_dirty(obj, x + 1, y - 1);
-      } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
-        // right and up
-        set_dirty(obj, x, y + 1);
-        set_dirty(obj, x + 1, y + 1);
-      }
-    } else if (chunk_y == 0 && y != 0) {
-      // down
-      set_dirty(obj, x, y - 1);
-    } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
-      // up
-      set_dirty(obj, x, y + 1);
-    }
+    set_dirty(obj, x - 1, y - 1);
+    set_dirty(obj, x - 1, y + 1);
+    set_dirty(obj, x + 1, y + 1);
+    set_dirty(obj, x + 1, y - 1);
+    // unsigned int chunk_x = x % SIM_CHUNK_SIZE;
+    // unsigned int chunk_y = y % SIM_CHUNK_SIZE;
+    //
+    // if (chunk_x == 0 && x != 0) {
+    //   // left
+    //   set_dirty(obj, x - 1, y);
+    //   if (chunk_y == 0 && y != 0) {
+    //     // left and down
+    //     set_dirty(obj, x, y - 1);
+    //     set_dirty(obj, x - 1, y - 1);
+    //   } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
+    //     // left and up
+    //     set_dirty(obj, x, y + 1);
+    //     set_dirty(obj, x - 1, y + 1);
+    //   }
+    // } else if (chunk_x == SIM_CHUNK_SIZE - 1 && x != SIM_WIDTH - 1) {
+    //   // right
+    //   set_dirty(obj, x + 1, y);
+    //   if (chunk_y == 0 && y != 0) {
+    //     // right and down
+    //     set_dirty(obj, x, y - 1);
+    //     set_dirty(obj, x + 1, y - 1);
+    //   } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
+    //     // right and up
+    //     set_dirty(obj, x, y + 1);
+    //     set_dirty(obj, x + 1, y + 1);
+    //   }
+    // } else if (chunk_y == 0 && y != 0) {
+    //   // down
+    //   set_dirty(obj, x, y - 1);
+    // } else if (chunk_y == SIM_CHUNK_SIZE - 1 && y != SIM_HEIGHT - 1) {
+    //   // up
+    //   set_dirty(obj, x, y + 1);
+    // }
 
     // if (chunk_x == 0 || chunk_x == SIM_CHUNK_SIZE - 1 || chunk_y == 0 ||
     //     chunk_y == SIM_CHUNK_SIZE - 1) {
@@ -519,28 +551,79 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
       Chunk *chunk = &p_obj->chunks[chunk_id];
 
       chunk->had_changed = chunk->dirty_bit;
+
       if (chunk->dirty_bit) {
+        int min_x = chunk->min_x;
+        int max_x = chunk->max_x;
+        int min_y = chunk->min_y;
+        int max_y = chunk->max_y;
+
+        chunk->min_x = (chunk_id_x + 1) * SIM_CHUNK_SIZE;
+        chunk->max_x = chunk_id_x * SIM_CHUNK_SIZE;
+        chunk->min_y = (chunk_id_y + 1) * SIM_CHUNK_SIZE;
+        chunk->max_y = chunk_id_y * SIM_CHUNK_SIZE;
+
         ShapeBox *chunk_box = (ShapeBox *)vertex_buffer_get(
             p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
             SHAPE_BOX_NUMBER_OF_VERTICES);
+
+        ShapeBox *chunk_dirty_rect_box = (ShapeBox *)vertex_buffer_get(
+            p_obj->vb_chunks_dirty_rect,
+            chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+            SHAPE_BOX_NUMBER_OF_VERTICES);
         int chunk_changed = 0;
-        for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE; local_y++) {
-          unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
-          for (unsigned int local_x = 0; local_x < SIM_CHUNK_SIZE; local_x++) {
-            unsigned int x = (chunk_id_x * SIM_CHUNK_SIZE) + local_x;
+        // for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE; local_y++) {
+        //   unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
+        //   for (unsigned int local_x = 0; local_x < SIM_CHUNK_SIZE; local_x++)
+        //   {
+        //     unsigned int x = (chunk_id_x * SIM_CHUNK_SIZE) + local_x;
+        //     unsigned char changed = update_sim(p_obj, x, y);
+        //     if (changed) {
+        //       // printf("Changed -> x: %d, y: %d\n", x, y);
+        //       chunk_changed = 1;
+        //       keep_active(chunk, x, y);
+        //     }
+        //   }
+        // }
+        for (unsigned int y = min_y; y < max_y; y++) {
+          for (unsigned int x = min_x; x < max_x; x++) {
             unsigned char changed = update_sim(p_obj, x, y);
             if (changed) {
               // printf("Changed -> x: %d, y: %d\n", x, y);
               chunk_changed = 1;
+              keep_active(chunk, x, y);
             }
           }
         }
+        // printf("min_x: %d, min_y: %d, max_x: %d, max_y: %d\n", chunk->min_x,
+        //        chunk->min_y, chunk->max_x, chunk->max_y);
+
+        // for (unsigned int y = chunk_id_y * SIM_CHUNK_SIZE;
+        //      y < (chunk_id_y + 1) * SIM_CHUNK_SIZE; y++) {
+        //   for (unsigned int x = chunk_id_x * SIM_CHUNK_SIZE;
+        //        x < (chunk_id_x + 1) * SIM_CHUNK_SIZE; x++) {
+        //     unsigned char changed = update_sim(p_obj, x, y);
+        //     if (changed) {
+        //       // printf("Changed -> x: %d, y: %d\n", x, y);
+        //       chunk_changed = 1;
+        //       keep_active(chunk, x, y);
+        //     }
+        //   }
+        // }
         chunk->dirty_bit = chunk_changed;
         if (chunk_changed) {
           shape_box_color_set(chunk_box, (Color){1, 0, 0, 1});
+
+          shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 1});
+          shape_box_move(chunk_dirty_rect_box,
+                         HORIZONTAL_OFFSET + chunk->min_x * SIM_CELL_SIZE,
+                         VERTICAL_OFFSET + chunk->min_y * SIM_CELL_SIZE,
+                         (chunk->max_x - chunk->min_x) * SIM_CELL_SIZE,
+                         (chunk->max_y - chunk->min_y) * SIM_CELL_SIZE);
           // printf("Box red\n");
         } else {
-          shape_box_color_set(chunk_box, (Color){0, 0, 0, 1});
+          shape_box_color_set(chunk_box, (Color){0, 0, 0, 0});
+          shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 0});
           // printf("Box black\n");
         }
       }
@@ -616,6 +699,7 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
 
   // vertex_buffer_flush(p_obj->vb_cells);
   vertex_buffer_flush(p_obj->vb_chunks);
+  vertex_buffer_flush(p_obj->vb_chunks_dirty_rect);
 }
 
 static void on_render(void *obj) {
@@ -683,6 +767,26 @@ static void on_render(void *obj) {
     }
 
     vertex_array_unbind();
+
+    shader_bind(p_obj->shader_chunks_dirty_rect);
+
+    {
+      mat4 model;
+      glm_translate_make(model, (vec3){0.0f, 0.0f, 0.0f});
+      glm_translate(model, (vec3){p_obj->value_x, p_obj->value_y, 0.0f});
+
+      mat4 mvp;
+      glm_mat4_mul(p_obj->proj, p_obj->view, mvp);
+      glm_mat4_mul(mvp, model, mvp);
+
+      shader_uniform_set_mat4f(p_obj->shader_chunks_dirty_rect, "u_MVP", mvp);
+
+      renderer_draw(p_obj->renderer, p_obj->va_chunks_dirty_rect,
+                    p_obj->vb_chunks_dirty_rect,
+                    p_obj->shader_chunks_dirty_rect);
+    }
+
+    vertex_array_unbind();
   }
 }
 
@@ -736,8 +840,13 @@ static void on_free(void *scene) {
   vertex_buffer_free(obj->vb_chunks);
   index_buffer_free(obj->ib_chunks);
   vertex_buffer_layout_free(obj->layout_chunks);
+  vertex_array_free(obj->va_chunks_dirty_rect);
+  vertex_buffer_free(obj->vb_chunks_dirty_rect);
+  index_buffer_free(obj->ib_chunks_dirty_rect);
+  vertex_buffer_layout_free(obj->layout_chunks_dirty_rect);
   shader_free(obj->shader_cells);
   shader_free(obj->shader_chunks);
+  shader_free(obj->shader_chunks_dirty_rect);
   texture_free(obj->texture_air);
   texture_free(obj->texture_water);
   texture_free(obj->texture_sand);
@@ -909,6 +1018,63 @@ Scene *scene_pixel_sim_init() {
   }
 
   vertex_buffer_flush(obj->vb_chunks);
+
+  // Unbind the VBO and VAO
+  vertex_array_unbind();
+  vertex_buffer_unbind();
+  index_buffer_unbind();
+
+  // Chunks dirty rectangles setup
+
+  obj->shader_chunks_dirty_rect =
+      shader_create("resources/shaders/pixel-sim-chunk-border.glsl");
+  shader_bind(obj->shader_chunks_dirty_rect);
+
+  // Create and bind a Vertex Array Object
+  obj->va_chunks_dirty_rect = vertex_array_create();
+
+  // Create and bind a Vertex Buffer Object
+  obj->vb_chunks_dirty_rect = vertex_buffer_create(
+      SIM_CHUNK_WIDTH * SIM_CHUNK_HEIGHT * SHAPE_BOX_NUMBER_OF_VERTICES);
+
+  obj->layout_chunks_dirty_rect = vertex_buffer_layout_create();
+  vertex_buffer_layout_push_float(obj->layout_chunks_dirty_rect, 3);
+  vertex_buffer_layout_push_float(obj->layout_chunks_dirty_rect, 4);
+  vertex_buffer_layout_push_float(obj->layout_chunks_dirty_rect, 2);
+  vertex_buffer_layout_push_float(obj->layout_chunks_dirty_rect, 1);
+  vertex_array_add_buffer(obj->va_chunks_dirty_rect, obj->vb_chunks_dirty_rect,
+                          obj->layout_chunks_dirty_rect);
+
+  // Create and bind a Index Buffer Object
+  // obj->ib = index_buffer_create(indices, 6 * 3);
+  obj->ib_chunks_dirty_rect = index_buffer_create_quad(
+      (SIM_CHUNK_WIDTH * SIM_CHUNK_HEIGHT * SHAPE_BOX_NUMBER_OF_VERTICES));
+
+  vertex_buffer_clear(obj->vb_chunks_dirty_rect);
+
+  for (int j = 0; j < SIM_CHUNK_HEIGHT; j++) {
+    for (int i = 0; i < SIM_CHUNK_WIDTH; i++) {
+      // Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size,
+      // size,
+      //                      0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
+      ShapeBox box = shape_box_create(
+          HORIZONTAL_OFFSET + i * SIM_CHUNK_SIZE_PIXEL,
+          VERTICAL_OFFSET + j * SIM_CHUNK_SIZE_PIXEL, SIM_CHUNK_SIZE_PIXEL,
+          SIM_CHUNK_SIZE_PIXEL, 1, (Color){0, 1, 0, 1}, 0);
+      vertex_buffer_push(obj->vb_chunks_dirty_rect, (Vertex *)&box,
+                         SHAPE_BOX_NUMBER_OF_VERTICES);
+
+      unsigned int chunk_id = (j * SIM_CHUNK_WIDTH) + i;
+      Chunk *chunk = &obj->chunks[chunk_id];
+
+      chunk->min_x = i * SIM_CHUNK_SIZE;
+      chunk->max_x = (i + 1) * SIM_CHUNK_SIZE;
+      chunk->min_y = j * SIM_CHUNK_SIZE;
+      chunk->max_y = (j + 1) * SIM_CHUNK_SIZE;
+    }
+  }
+
+  vertex_buffer_flush(obj->vb_chunks_dirty_rect);
 
   // Unbind the VBO and VAO
   vertex_array_unbind();

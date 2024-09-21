@@ -21,3 +21,13 @@ void shape_box_color_set(ShapeBox *sb, Color color) {
   quad_color_set(&sb->right, color);
   quad_color_set(&sb->down, color);
 }
+
+void shape_box_move(ShapeBox *sb, float x, float y, float width, float height) {
+
+  float thickness = sb->left.rd.pos.x - sb->left.ld.pos.x;
+  quad_move(&sb->left, x, y, 0.0f, thickness, height, 0.0f);
+  quad_move(&sb->up, x, y + height - thickness, 0.0f, width, thickness, 0.0f);
+  quad_move(&sb->right, x + width - thickness, y, 0.0f, thickness, height,
+            0.0f);
+  quad_move(&sb->down, x, y, 0.0f, width, thickness, 0.0f);
+}
