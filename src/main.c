@@ -50,6 +50,7 @@ int main(void) {
   UI ui = ui_init(window);
 
   ScenePair scene_pairs[] = {
+      {"Pixel Sim", &scene_pixel_sim_init},
       {"Empty", &scene_empty_init},
       {"Clear Color", &scene_clear_color_init},
       {"Color", &scene_color_init},
@@ -57,7 +58,7 @@ int main(void) {
       {"Texture", &scene_texture_init},
       {"Batch Rendering", &scene_batch_rendering_init},
       {"Cube", &scene_cube_init},
-      {"Pixel Sim", &scene_pixel_sim_init},
+      // {"Pixel Sim", &scene_pixel_sim_init},
   };
 
   Scene *scene = scene_pairs[0].init_function();
@@ -130,6 +131,8 @@ int main(void) {
     ui.perf_values.update_time = timer_elapsed(update_time);
     ui.perf_values.scene_render_time = timer_elapsed(scene_render_time);
     ui.perf_values.ui_render_time = timer_elapsed(ui_render_time);
+
+    // printf("%f\n", ui.perf_values.fps);
 
     // int target_fps = 2;
     // long target_frame_time = 1000000000 / target_fps;

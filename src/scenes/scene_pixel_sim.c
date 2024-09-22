@@ -11,6 +11,7 @@
 #include "../utils/timer.h"
 #include "scene_pixel_sim.h"
 #include <cglm/cglm.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,7 @@
 #define SIM_WIDTH (25 * 25)
 #define SIM_HEIGHT (25 * 18)
 #define SIM_CELL_SIZE 2
+
 #define SIM_CELL_COUNT (SIM_WIDTH * SIM_HEIGHT)
 
 #define SIM_CHUNK_SIZE 25
@@ -35,6 +37,8 @@
 
 #define HORIZONTAL_OFFSET ((WINDOW_WIDTH / 2.0f) - (SIM_WIDTH_PIXEL / 2.0f))
 #define VERTICAL_OFFSET 50.0f
+
+#define NUM_THREADS 8
 
 typedef struct {
   int dirty_bit;
@@ -71,6 +75,7 @@ typedef struct {
   char show_chunks_clear;
   Chunk *chunks;
   threadpool threadpool;
+  struct sim_args *args;
 } PixelSimObj;
 
 typedef enum {
@@ -527,22 +532,116 @@ static unsigned char update_sim(PixelSimObj *obj, int x, int y) {
   return changed;
 }
 
-void task(void *arg) {
-  printf("Thread #%u working on %d\n", (int)pthread_self(), (int)arg);
+struct sim_args {
+  unsigned int chunk_x;
+  unsigned int chunk_y;
+  unsigned int chunk_id;
+  PixelSimObj *p_obj;
+};
+
+void sim_task(void *arg) {
+  struct sim_args *args = (struct sim_args *)arg;
+  const unsigned int chunk_id = args->chunk_id;
+  PixelSimObj *p_obj = args->p_obj;
+
+  Chunk *const chunk = &p_obj->chunks[chunk_id];
+
+  chunk->had_changed = chunk->dirty_bit;
+
+  if (chunk->dirty_bit) {
+    // printf("Thread #%u working\n", (int)pthread_self());
+    const unsigned int chunk_x = args->chunk_x;
+    const unsigned int chunk_y = args->chunk_y;
+    const int min_x = chunk->min_x;
+    const int max_x = chunk->max_x;
+    const int min_y = chunk->min_y;
+    const int max_y = chunk->max_y;
+
+    chunk->min_x = (chunk_x + 1) * SIM_CHUNK_SIZE;
+    chunk->max_x = chunk_x * SIM_CHUNK_SIZE;
+    chunk->min_y = (chunk_y + 1) * SIM_CHUNK_SIZE;
+    chunk->max_y = chunk_y * SIM_CHUNK_SIZE;
+
+    ShapeBox *const chunk_box = (ShapeBox *)vertex_buffer_get(
+        p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+        SHAPE_BOX_NUMBER_OF_VERTICES);
+
+    ShapeBox *const chunk_dirty_rect_box = (ShapeBox *)vertex_buffer_get(
+        p_obj->vb_chunks_dirty_rect, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+        SHAPE_BOX_NUMBER_OF_VERTICES);
+    int chunk_changed = 0;
+    // for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE; local_y++)
+    // {
+    //   unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
+    //   for (unsigned int local_x = 0; local_x < SIM_CHUNK_SIZE;
+    //   local_x++)
+    //   {
+    //     unsigned int x = (chunk_id_x * SIM_CHUNK_SIZE) + local_x;
+    //     unsigned char changed = update_sim(p_obj, x, y);
+    //     if (changed) {
+    //       // printf("Changed -> x: %d, y: %d\n", x, y);
+    //       chunk_changed = 1;
+    //       keep_active(chunk, x, y);
+    //     }
+    //   }
+    // }
+    for (unsigned int y = min_y; y < max_y; y++) {
+      for (unsigned int x = min_x; x < max_x; x++) {
+        unsigned char changed = update_sim(p_obj, x, y);
+        if (changed) {
+          // printf("Changed -> x: %d, y: %d\n", x, y);
+          chunk_changed = 1;
+          keep_active(chunk, x, y);
+        }
+      }
+    }
+    // printf("min_x: %d, min_y: %d, max_x: %d, max_y: %d\n",
+    // chunk->min_x,
+    //        chunk->min_y, chunk->max_x, chunk->max_y);
+
+    // for (unsigned int y = chunk_id_y * SIM_CHUNK_SIZE;
+    //      y < (chunk_id_y + 1) * SIM_CHUNK_SIZE; y++) {
+    //   for (unsigned int x = chunk_id_x * SIM_CHUNK_SIZE;
+    //        x < (chunk_id_x + 1) * SIM_CHUNK_SIZE; x++) {
+    //     unsigned char changed = update_sim(p_obj, x, y);
+    //     if (changed) {
+    //       // printf("Changed -> x: %d, y: %d\n", x, y);
+    //       chunk_changed = 1;
+    //       keep_active(chunk, x, y);
+    //     }
+    //   }
+    // }
+    chunk->dirty_bit = chunk_changed;
+    if (chunk_changed) {
+      shape_box_color_set(chunk_box, (Color){1, 0, 0, 1});
+
+      shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 1});
+      shape_box_move(chunk_dirty_rect_box,
+                     HORIZONTAL_OFFSET + chunk->min_x * SIM_CELL_SIZE,
+                     VERTICAL_OFFSET + chunk->min_y * SIM_CELL_SIZE,
+                     (chunk->max_x - chunk->min_x) * SIM_CELL_SIZE,
+                     (chunk->max_y - chunk->min_y) * SIM_CELL_SIZE);
+      // printf("Box red\n");
+    } else {
+      shape_box_color_set(chunk_box, (Color){0, 0, 0, 0});
+      shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 0});
+      // printf("Box black\n");
+    }
+  }
 }
 
 static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   PixelSimObj *p_obj = (PixelSimObj *)obj;
 
-  puts("Adding 40 tasks to threadpool");
-  int i;
-  for (i = 0; i < 40; i++) {
-    thpool_add_work(p_obj->threadpool, task, (void *)(uintptr_t)i);
-  };
-
-  thpool_wait(p_obj->threadpool);
-
-  printf("After wait\n\n\n");
+  // puts("Adding 40 tasks to threadpool");
+  // int i;
+  // for (i = 0; i < 40; i++) {
+  //   thpool_add_work(p_obj->threadpool, task, (void *)(uintptr_t)i);
+  // };
+  //
+  // thpool_wait(p_obj->threadpool);
+  //
+  // printf("After wait\n\n\n");
   // Create Quads
   // vertex_buffer_clear(p_obj->vb);
   //
@@ -561,103 +660,129 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   // Quad *spawn_q = cell_get(p_obj, SIM_WIDTH / 2, SIM_HEIGHT - 1);
   // quad_texture_id_set(spawn_q, 2);
 
-  // Timer *total = timer_init();
-  // Timer *update_loop = timer_init();
-  // Timer *mouse_action = timer_init();
-  // Timer *data_flushing = timer_init();
+  Timer *total = timer_init();
+  Timer *update_loop = timer_init();
+  Timer *mouse_action = timer_init();
+  Timer *data_flushing = timer_init();
 
-  // timer_start(total);
-  // timer_start(update_loop);
+  timer_start(total);
+  timer_start(update_loop);
 
-  for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
-       chunk_id_y++) {
-    for (unsigned int chunk_id_x = 0; chunk_id_x < SIM_CHUNK_WIDTH;
-         chunk_id_x++) {
-      const unsigned int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) + chunk_id_x;
-      Chunk *const chunk = &p_obj->chunks[chunk_id];
+  for (char phase = 0; phase < 4; phase++) {
+    // printf("\n ---------------------------------\nPhase %d\n", phase);
+    for (int chunk_y = (phase / 2) % 2; chunk_y < SIM_CHUNK_HEIGHT;
+         chunk_y += 2) {
+      for (int chunk_x = phase % 2; chunk_x < SIM_CHUNK_WIDTH; chunk_x += 2) {
+        const unsigned int chunk_id = (chunk_y * SIM_CHUNK_WIDTH) + chunk_x;
 
-      chunk->had_changed = chunk->dirty_bit;
-
-      if (chunk->dirty_bit) {
-        const int min_x = chunk->min_x;
-        const int max_x = chunk->max_x;
-        const int min_y = chunk->min_y;
-        const int max_y = chunk->max_y;
-
-        chunk->min_x = (chunk_id_x + 1) * SIM_CHUNK_SIZE;
-        chunk->max_x = chunk_id_x * SIM_CHUNK_SIZE;
-        chunk->min_y = (chunk_id_y + 1) * SIM_CHUNK_SIZE;
-        chunk->max_y = chunk_id_y * SIM_CHUNK_SIZE;
-
-        ShapeBox *const chunk_box = (ShapeBox *)vertex_buffer_get(
-            p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
-            SHAPE_BOX_NUMBER_OF_VERTICES);
-
-        ShapeBox *const chunk_dirty_rect_box = (ShapeBox *)vertex_buffer_get(
-            p_obj->vb_chunks_dirty_rect,
-            chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
-            SHAPE_BOX_NUMBER_OF_VERTICES);
-        int chunk_changed = 0;
-        // for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE; local_y++) {
-        //   unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
-        //   for (unsigned int local_x = 0; local_x < SIM_CHUNK_SIZE; local_x++)
-        //   {
-        //     unsigned int x = (chunk_id_x * SIM_CHUNK_SIZE) + local_x;
-        //     unsigned char changed = update_sim(p_obj, x, y);
-        //     if (changed) {
-        //       // printf("Changed -> x: %d, y: %d\n", x, y);
-        //       chunk_changed = 1;
-        //       keep_active(chunk, x, y);
-        //     }
-        //   }
-        // }
-        for (unsigned int y = min_y; y < max_y; y++) {
-          for (unsigned int x = min_x; x < max_x; x++) {
-            unsigned char changed = update_sim(p_obj, x, y);
-            if (changed) {
-              // printf("Changed -> x: %d, y: %d\n", x, y);
-              chunk_changed = 1;
-              keep_active(chunk, x, y);
-            }
-          }
+        char bit = p_obj->chunks[chunk_id].dirty_bit ||
+                   p_obj->chunks[chunk_id].had_changed;
+        if (bit) {
+          // sim_task(&p_obj->args[chunk_id]);
+          thpool_add_work(p_obj->threadpool, sim_task, &p_obj->args[chunk_id]);
         }
-        // printf("min_x: %d, min_y: %d, max_x: %d, max_y: %d\n", chunk->min_x,
-        //        chunk->min_y, chunk->max_x, chunk->max_y);
-
-        // for (unsigned int y = chunk_id_y * SIM_CHUNK_SIZE;
-        //      y < (chunk_id_y + 1) * SIM_CHUNK_SIZE; y++) {
-        //   for (unsigned int x = chunk_id_x * SIM_CHUNK_SIZE;
-        //        x < (chunk_id_x + 1) * SIM_CHUNK_SIZE; x++) {
-        //     unsigned char changed = update_sim(p_obj, x, y);
-        //     if (changed) {
-        //       // printf("Changed -> x: %d, y: %d\n", x, y);
-        //       chunk_changed = 1;
-        //       keep_active(chunk, x, y);
-        //     }
-        //   }
         // }
-        chunk->dirty_bit = chunk_changed;
-        if (chunk_changed) {
-          shape_box_color_set(chunk_box, (Color){1, 0, 0, 1});
-
-          shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 1});
-          shape_box_move(chunk_dirty_rect_box,
-                         HORIZONTAL_OFFSET + chunk->min_x * SIM_CELL_SIZE,
-                         VERTICAL_OFFSET + chunk->min_y * SIM_CELL_SIZE,
-                         (chunk->max_x - chunk->min_x) * SIM_CELL_SIZE,
-                         (chunk->max_y - chunk->min_y) * SIM_CELL_SIZE);
-          // printf("Box red\n");
-        } else {
-          shape_box_color_set(chunk_box, (Color){0, 0, 0, 0});
-          shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 0});
-          // printf("Box black\n");
-        }
       }
     }
+
+    // printf("%d\n", thpool_num_threads_working(p_obj->threadpool));
+
+    thpool_wait(p_obj->threadpool);
+    // printf("Done with phase %d\n", phase);
   }
 
-  // timer_stop(update_loop);
-  // timer_start(mouse_action);
+  // for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
+  //      chunk_id_y++) {
+  //   for (unsigned int chunk_id_x = 0; chunk_id_x < SIM_CHUNK_WIDTH;
+  //        chunk_id_x++) {
+  //     const unsigned int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) +
+  //     chunk_id_x; Chunk *const chunk = &p_obj->chunks[chunk_id];
+  //
+  //     chunk->had_changed = chunk->dirty_bit;
+  //
+  //     if (chunk->dirty_bit) {
+  //       const int min_x = chunk->min_x;
+  //       const int max_x = chunk->max_x;
+  //       const int min_y = chunk->min_y;
+  //       const int max_y = chunk->max_y;
+  //
+  //       chunk->min_x = (chunk_id_x + 1) * SIM_CHUNK_SIZE;
+  //       chunk->max_x = chunk_id_x * SIM_CHUNK_SIZE;
+  //       chunk->min_y = (chunk_id_y + 1) * SIM_CHUNK_SIZE;
+  //       chunk->max_y = chunk_id_y * SIM_CHUNK_SIZE;
+  //
+  //       ShapeBox *const chunk_box = (ShapeBox *)vertex_buffer_get(
+  //           p_obj->vb_chunks, chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+  //           SHAPE_BOX_NUMBER_OF_VERTICES);
+  //
+  //       ShapeBox *const chunk_dirty_rect_box = (ShapeBox *)vertex_buffer_get(
+  //           p_obj->vb_chunks_dirty_rect,
+  //           chunk_id * SHAPE_BOX_NUMBER_OF_VERTICES,
+  //           SHAPE_BOX_NUMBER_OF_VERTICES);
+  //       int chunk_changed = 0;
+  //       // for (unsigned int local_y = 0; local_y < SIM_CHUNK_SIZE;
+  //       local_y++) {
+  //       //   unsigned int y = (chunk_id_y * SIM_CHUNK_SIZE) + local_y;
+  //       //   for (unsigned int local_x = 0; local_x < SIM_CHUNK_SIZE;
+  //       local_x++)
+  //       //   {
+  //       //     unsigned int x = (chunk_id_x * SIM_CHUNK_SIZE) + local_x;
+  //       //     unsigned char changed = update_sim(p_obj, x, y);
+  //       //     if (changed) {
+  //       //       // printf("Changed -> x: %d, y: %d\n", x, y);
+  //       //       chunk_changed = 1;
+  //       //       keep_active(chunk, x, y);
+  //       //     }
+  //       //   }
+  //       // }
+  //       for (unsigned int y = min_y; y < max_y; y++) {
+  //         for (unsigned int x = min_x; x < max_x; x++) {
+  //           unsigned char changed = update_sim(p_obj, x, y);
+  //           if (changed) {
+  //             // printf("Changed -> x: %d, y: %d\n", x, y);
+  //             chunk_changed = 1;
+  //             keep_active(chunk, x, y);
+  //           }
+  //         }
+  //       }
+  //       // printf("min_x: %d, min_y: %d, max_x: %d, max_y: %d\n",
+  //       chunk->min_x,
+  //       //        chunk->min_y, chunk->max_x, chunk->max_y);
+  //
+  //       // for (unsigned int y = chunk_id_y * SIM_CHUNK_SIZE;
+  //       //      y < (chunk_id_y + 1) * SIM_CHUNK_SIZE; y++) {
+  //       //   for (unsigned int x = chunk_id_x * SIM_CHUNK_SIZE;
+  //       //        x < (chunk_id_x + 1) * SIM_CHUNK_SIZE; x++) {
+  //       //     unsigned char changed = update_sim(p_obj, x, y);
+  //       //     if (changed) {
+  //       //       // printf("Changed -> x: %d, y: %d\n", x, y);
+  //       //       chunk_changed = 1;
+  //       //       keep_active(chunk, x, y);
+  //       //     }
+  //       //   }
+  //       // }
+  //       chunk->dirty_bit = chunk_changed;
+  //       if (chunk_changed) {
+  //         shape_box_color_set(chunk_box, (Color){1, 0, 0, 1});
+  //
+  //         shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 1});
+  //         shape_box_move(chunk_dirty_rect_box,
+  //                        HORIZONTAL_OFFSET + chunk->min_x * SIM_CELL_SIZE,
+  //                        VERTICAL_OFFSET + chunk->min_y * SIM_CELL_SIZE,
+  //                        (chunk->max_x - chunk->min_x) * SIM_CELL_SIZE,
+  //                        (chunk->max_y - chunk->min_y) * SIM_CELL_SIZE);
+  //         // printf("Box red\n");
+  //       } else {
+  //         shape_box_color_set(chunk_box, (Color){0, 0, 0, 0});
+  //         shape_box_color_set(chunk_dirty_rect_box, (Color){0, 0, 0, 0});
+  //         // printf("Box black\n");
+  //       }
+  //     }
+  //   }
+  // }
+
+  timer_stop(update_loop);
+  timer_start(mouse_action);
 
   double xpos, ypos;
   char sand_click = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -702,8 +827,8 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
     }
   }
 
-  // timer_stop(mouse_action);
-  // timer_start(data_flushing);
+  timer_stop(mouse_action);
+  timer_start(data_flushing);
 
   for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
        chunk_id_y++) {
@@ -742,12 +867,12 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
     vertex_buffer_flush(p_obj->vb_chunks_dirty_rect);
   }
 
-  // timer_stop(data_flushing);
-  // timer_stop(total);
-  //
-  // printf("Total: %lf, update: %lf, mouse: %lf, data: %lf\n",
-  //        timer_elapsed(total), timer_elapsed(update_loop),
-  //        timer_elapsed(mouse_action), timer_elapsed(data_flushing));
+  timer_stop(data_flushing);
+  timer_stop(total);
+
+  printf("Total: %lf, update: %lf, mouse: %lf, data: %lf\n",
+         timer_elapsed(total), timer_elapsed(update_loop),
+         timer_elapsed(mouse_action), timer_elapsed(data_flushing));
 
   // for (int i = 0; i < total; i++) {
   //   int x = i % SIM_WIDTH;
@@ -943,7 +1068,7 @@ Scene *scene_pixel_sim_init() {
   obj->show_chunks = 0;
   obj->show_chunks_clear = 0;
 
-  obj->threadpool = thpool_init(4);
+  obj->threadpool = thpool_init(NUM_THREADS);
 
   obj->renderer = renderer_create();
 
@@ -954,6 +1079,8 @@ Scene *scene_pixel_sim_init() {
   // const float vertical_offset = 50.0f;
 
   obj->chunks = calloc(SIM_CHUNK_COUNT, sizeof(Chunk));
+
+  obj->args = calloc(SIM_CHUNK_COUNT, sizeof(struct sim_args));
 
   // Cells setup
 
@@ -999,8 +1126,8 @@ Scene *scene_pixel_sim_init() {
 
   for (int chunk_id = 0; chunk_id < SIM_CHUNK_COUNT; chunk_id++) {
     Chunk *current_chunk = &obj->chunks[chunk_id];
-    current_chunk->dirty_bit = 1;
-    current_chunk->had_changed = 1;
+    current_chunk->dirty_bit = 0;
+    current_chunk->had_changed = 0;
     const int chunk_x_location = chunk_id % SIM_CHUNK_WIDTH;
     const int chunk_y_location = chunk_id / SIM_CHUNK_WIDTH;
     Quad *first_element = NULL;
@@ -1125,25 +1252,32 @@ Scene *scene_pixel_sim_init() {
 
   vertex_buffer_clear(obj->vb_chunks_dirty_rect);
 
-  for (int j = 0; j < SIM_CHUNK_HEIGHT; j++) {
-    for (int i = 0; i < SIM_CHUNK_WIDTH; i++) {
+  for (int chunk_y = 0; chunk_y < SIM_CHUNK_HEIGHT; chunk_y++) {
+    for (int chunk_x = 0; chunk_x < SIM_CHUNK_WIDTH; chunk_x++) {
       // Quad q = quad_create(50.0f + i * size, 50.0f + j * size, 0.0f, size,
       // size,
       //                      0.0f, (Color){0.0f, 0.0f, 0.0f, 1.0f}, 0);
-      ShapeBox box = shape_box_create(
-          HORIZONTAL_OFFSET + i * SIM_CHUNK_SIZE_PIXEL,
-          VERTICAL_OFFSET + j * SIM_CHUNK_SIZE_PIXEL, SIM_CHUNK_SIZE_PIXEL,
-          SIM_CHUNK_SIZE_PIXEL, 1, (Color){0, 0, 0, 0}, 0);
+      ShapeBox box =
+          shape_box_create(HORIZONTAL_OFFSET + chunk_x * SIM_CHUNK_SIZE_PIXEL,
+                           VERTICAL_OFFSET + chunk_y * SIM_CHUNK_SIZE_PIXEL,
+                           SIM_CHUNK_SIZE_PIXEL, SIM_CHUNK_SIZE_PIXEL, 1,
+                           (Color){0, 0, 0, 0}, 0);
       vertex_buffer_push(obj->vb_chunks_dirty_rect, (Vertex *)&box,
                          SHAPE_BOX_NUMBER_OF_VERTICES);
 
-      const unsigned int chunk_id = (j * SIM_CHUNK_WIDTH) + i;
+      const unsigned int chunk_id = (chunk_y * SIM_CHUNK_WIDTH) + chunk_x;
       Chunk *chunk = &obj->chunks[chunk_id];
 
-      chunk->min_x = i * SIM_CHUNK_SIZE;
-      chunk->max_x = (i + 1) * SIM_CHUNK_SIZE;
-      chunk->min_y = j * SIM_CHUNK_SIZE;
-      chunk->max_y = (j + 1) * SIM_CHUNK_SIZE;
+      chunk->min_x = chunk_x * SIM_CHUNK_SIZE;
+      chunk->max_x = (chunk_x + 1) * SIM_CHUNK_SIZE;
+      chunk->min_y = chunk_y * SIM_CHUNK_SIZE;
+      chunk->max_y = (chunk_y + 1) * SIM_CHUNK_SIZE;
+
+      struct sim_args *args = &obj->args[chunk_id];
+      args->chunk_x = chunk_x;
+      args->chunk_y = chunk_y;
+      args->chunk_id = chunk_id;
+      args->p_obj = obj;
     }
   }
 
