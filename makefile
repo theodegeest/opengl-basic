@@ -5,7 +5,7 @@ OBJS = $(patsubst %.c, $(OBJ)/%.o, $(SRCS))
 CC := gcc
 CFLAGS := -Wall
 # CFLAGS := -Wall -O3
-LFLAGS := -lglfw -ldl -lm -lcglm -lGL
+LFLAGS := -lglfw -ldl -lm -lcglm -lGL -pthread
 ZIPNAME := project.zip
 BIN := bin
 OBJ := obj
@@ -37,7 +37,6 @@ zip:
 	zip $(ZIPNAME) $(SRC)/*
 
 release: CFLAGS = -Wall -O3
-release: clean
 release: $(target)
 
 dev: all

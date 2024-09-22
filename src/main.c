@@ -78,6 +78,7 @@ int main(void) {
   Timer *ui_render_time = timer_init();
 
   struct timespec last_time, current_time;
+    clock_gettime(CLOCK_MONOTONIC, &last_time);
   double delta_time = 0;
 
   // Rendering loop
