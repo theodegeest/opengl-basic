@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "../../include/Nuklear/nuklear.h"
@@ -123,25 +124,40 @@ typedef struct {
   UpdateAction action[TYPE_COUNT];
 } InstructionNode;
 
-// TODO: Maybe optimize the next two functions
+static char inside_boundaries(int x, int y) {
+  return x >= 0 && x < SIM_WIDTH && y >= 0 && y < SIM_HEIGHT;
+}
+
+static int chunk_get_id(int x, int y) {
+  const int chunk_x = x / SIM_CHUNK_SIZE;
+  const int chunk_y = y / SIM_CHUNK_SIZE;
+  return (chunk_y * SIM_CHUNK_WIDTH) + chunk_x;
+}
+
+static Chunk *chunk_get_from_id(PixelSimObj *obj, int chunk_id) {
+  return &obj->chunks[chunk_id];
+}
+
 static Chunk *chunk_get(PixelSimObj *obj, int x, int y) {
   // if (x < 0 || x >= SIM_WIDTH || y < 0 || y >= SIM_HEIGHT) {
   //   return NULL;
   // }
-  const int chunk_id_x = x / SIM_CHUNK_SIZE;
-  const int chunk_id_y = y / SIM_CHUNK_SIZE;
-  // int cell_id = (y * SIM_WIDTH) + x;
-  // int chunk_id = cell_id / SIM_CHUNK_CELL_COUNT;
-  const int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) + chunk_id_x;
-  // printf("x: %d, y: %d, chunk: %d\n", x, y, chunk_id);
-  return &obj->chunks[chunk_id];
+  // const int chunk_id_x = x / SIM_CHUNK_SIZE;
+  // const int chunk_id_y = y / SIM_CHUNK_SIZE;
+  // // int cell_id = (y * SIM_WIDTH) + x;
+  // // int chunk_id = cell_id / SIM_CHUNK_CELL_COUNT;
+  // const int chunk_id = (chunk_id_y * SIM_CHUNK_WIDTH) + chunk_id_x;
+  // // printf("x: %d, y: %d, chunk: %d\n", x, y, chunk_id);
+  // return &obj->chunks[chunk_id];
+  return chunk_get_from_id(obj, chunk_get_id(x, y));
 }
 
-static Quad *cell_get(PixelSimObj *obj, int x, int y) {
-  if (x < 0 || x >= SIM_WIDTH || y < 0 || y >= SIM_HEIGHT) {
+static Quad *cell_get_from_chunk(PixelSimObj *obj, Chunk *chunk, int x, int y) {
+  if (!inside_boundaries(x, y)) {
     return NULL;
   }
-  const Chunk *chunk = chunk_get(obj, x, y);
+
+  // const Chunk *chunk = chunk_get(obj, x, y);
   const int chunk_x = x % SIM_CHUNK_SIZE;
   const int chunk_y = y % SIM_CHUNK_SIZE;
   const int chunk_index = (chunk_y * SIM_CHUNK_SIZE) + chunk_x;
@@ -155,7 +171,7 @@ static Quad *cell_get(PixelSimObj *obj, int x, int y) {
 // } InstructionInfo;
 
 // on instructions[TYPE] are the instructions for that type.
-InstructionNode *instructions;
+// InstructionNode *instructions;
 // InstructionInfo instructions[TYPE_COUNT] = {
 //     // AIR
 //     {1,
@@ -235,9 +251,6 @@ InstructionNode *instructions;
 //
 //   return ACTION_NONE; // Default action if no match is found
 // }
-static char check_boundaries(int x, int y) {
-  return x >= 0 && x < SIM_WIDTH && y >= 0 && y < SIM_HEIGHT;
-}
 
 static SimType get_type_from_texture_id(float texture_id) {
   return (SimType)texture_id;
@@ -246,7 +259,7 @@ static SimType get_type_from_texture_id(float texture_id) {
 static float get_texture_id(SimType type) { return (float)type; }
 
 static SimType get_type(int x, int y, Quad *q) {
-  if (x < 0 || x >= SIM_WIDTH || y < 0 || y >= SIM_HEIGHT) {
+  if (!inside_boundaries(x, y)) {
     return TYPE_OUTOFBOUNDS;
   }
   // int i = SIM_WIDTH * y + x;
@@ -305,15 +318,16 @@ void keep_active(Chunk *chunk, int x, int y) {
   }
 }
 
-static void set_dirty(PixelSimObj *obj, int x, int y) {
-  Chunk *chunk = chunk_get(obj, x, y);
+static void set_dirty_from_chunk(PixelSimObj *obj, Chunk *chunk, int x, int y) {
+  // Chunk *chunk = chunk_get(obj, x, y);
   chunk->dirty_bit = 1;
   keep_active(chunk, x, y);
 }
 
-static void set_dirty_safe(PixelSimObj *obj, int x, int y) {
-  if (check_boundaries(x, y)) {
-    set_dirty(obj, x, y);
+static void set_dirty_from_chunk_safe(PixelSimObj *obj, Chunk *chunk, int x,
+                                      int y) {
+  if (inside_boundaries(x, y)) {
+    set_dirty_from_chunk(obj, chunk, x, y);
   }
 }
 
@@ -334,54 +348,79 @@ static void set_dirty_safe(PixelSimObj *obj, int x, int y) {
 //   }
 // }
 
-static void set_type_and_dirty(PixelSimObj *obj, int x, int y, Quad *q,
-                               SimType type) {
+static void set_type_and_dirty_from_chunk(PixelSimObj *obj, Chunk *chunk, int x,
+                                          int y, Quad *q, SimType type) {
   set_type(x, y, q, type);
-  set_dirty(obj, x, y);
+  set_dirty_from_chunk(obj, chunk, x, y);
 }
 
 // Returns 0 when no changes, returns 1 when something has changed
-static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
-  Quad *q2 = cell_get(obj, x, y - 1);
+static unsigned char update_sim_sand(PixelSimObj *obj, int chunk_id_q1,
+                                     Chunk *chunk_q1, int x, int y, Quad *q1) {
   unsigned char changed = 0;
+
   // Check under
+  int chunk_id_q2 = chunk_get_id(x, y - 1);
+  Chunk *chunk_q2;
+  if (chunk_id_q1 == chunk_id_q2) {
+    chunk_q2 = chunk_q1;
+  } else {
+    chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+  }
+
+  Quad *q2 = cell_get_from_chunk(obj, chunk_q2, x, y - 1);
+
   switch (get_type(x, y - 1, q2)) {
   case TYPE_AIR:
     set_type(x, y, q1, TYPE_AIR);
-    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
+    set_type_and_dirty_from_chunk(obj, chunk_q2, x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_WATER:
     set_type(x, y, q1, TYPE_WATER);
-    set_type_and_dirty(obj, x, y - 1, q2, TYPE_SAND);
+    set_type_and_dirty_from_chunk(obj, chunk_q2, x, y - 1, q2, TYPE_SAND);
     changed = 1;
     break;
   case TYPE_SAND:
     // Check left
-    q2 = cell_get(obj, x - 1, y - 1);
+    chunk_id_q2 = chunk_get_id(x - 1, y - 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      chunk_q2 = chunk_q1;
+    } else {
+      chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+    }
+    q2 = cell_get_from_chunk(obj, chunk_q2, x - 1, y - 1);
     switch (get_type(x - 1, y - 1, q2)) {
     case TYPE_AIR:
       set_type(x, y, q1, TYPE_AIR);
-      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
+      set_type_and_dirty_from_chunk(obj, chunk_q2, x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_WATER:
       set_type(x, y, q1, TYPE_WATER);
-      set_type_and_dirty(obj, x - 1, y - 1, q2, TYPE_SAND);
+      set_type_and_dirty_from_chunk(obj, chunk_q2, x - 1, y - 1, q2, TYPE_SAND);
       changed = 1;
       break;
     case TYPE_SAND:
       // Check right
-      q2 = cell_get(obj, x + 1, y - 1);
+      chunk_id_q2 = chunk_get_id(x + 1, y - 1);
+      if (chunk_id_q1 == chunk_id_q2) {
+        chunk_q2 = chunk_q1;
+      } else {
+        chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+      }
+      q2 = cell_get_from_chunk(obj, chunk_q2, x + 1, y - 1);
       switch (get_type(x + 1, y - 1, q2)) {
       case TYPE_AIR:
         set_type(x, y, q1, TYPE_AIR);
-        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
+        set_type_and_dirty_from_chunk(obj, chunk_q2, x + 1, y - 1, q2,
+                                      TYPE_SAND);
         changed = 1;
         break;
       case TYPE_WATER:
         set_type(x, y, q1, TYPE_WATER);
-        set_type_and_dirty(obj, x + 1, y - 1, q2, TYPE_SAND);
+        set_type_and_dirty_from_chunk(obj, chunk_q2, x + 1, y - 1, q2,
+                                      TYPE_SAND);
         changed = 1;
         break;
       case TYPE_SAND:
@@ -402,10 +441,37 @@ static unsigned char update_sim_sand(PixelSimObj *obj, int x, int y, Quad *q1) {
   }
 
   if (changed) {
-    set_dirty_safe(obj, x - 1, y - 1);
-    set_dirty_safe(obj, x - 1, y + 1);
-    set_dirty_safe(obj, x + 1, y + 1);
-    set_dirty_safe(obj, x + 1, y - 1);
+    int chunk_id_q2 = chunk_get_id(x - 1, y - 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x - 1, y - 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x - 1,
+                                y - 1);
+    }
+
+    chunk_id_q2 = chunk_get_id(x - 1, y + 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x - 1, y + 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x - 1,
+                                y + 1);
+    }
+
+    chunk_id_q2 = chunk_get_id(x + 1, y + 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x + 1, y + 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x + 1,
+                                y + 1);
+    }
+
+    chunk_id_q2 = chunk_get_id(x + 1, y - 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x + 1, y - 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x + 1,
+                                y - 1);
+    }
     // unsigned int chunk_x = x % SIM_CHUNK_SIZE;
     // unsigned int chunk_y = y % SIM_CHUNK_SIZE;
     //
@@ -511,7 +577,9 @@ static unsigned char update_sim(PixelSimObj *obj, int x, int y) {
   // }
 
   unsigned char changed = 0;
-  Quad *q = cell_get(obj, x, y);
+  int chunk_id = chunk_get_id(x, y);
+  Chunk *chunk = chunk_get_from_id(obj, chunk_id);
+  Quad *q = cell_get_from_chunk(obj, chunk, x, y);
   if (q == NULL) {
     printf("DEBUG, %d, %d\n", x, y);
   }
@@ -522,7 +590,7 @@ static unsigned char update_sim(PixelSimObj *obj, int x, int y) {
   case TYPE_WATER:
     break;
   case TYPE_SAND:
-    changed = update_sim_sand(obj, x, y, q);
+    changed = update_sim_sand(obj, chunk_id, chunk, x, y, q);
     break;
   case TYPE_OUTOFBOUNDS:
   case TYPE_COUNT:
@@ -660,15 +728,20 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   // Quad *spawn_q = cell_get(p_obj, SIM_WIDTH / 2, SIM_HEIGHT - 1);
   // quad_texture_id_set(spawn_q, 2);
 
-  Timer *total = timer_init();
-  Timer *update_loop = timer_init();
-  Timer *mouse_action = timer_init();
-  Timer *data_flushing = timer_init();
+  // Timer *total = timer_init();
+  // Timer *update_loop = timer_init();
+  // Timer *mouse_action = timer_init();
+  // Timer *data_flushing = timer_init();
+  //
+  // timer_start(total);
+  // timer_start(update_loop);
 
-  timer_start(total);
-  timer_start(update_loop);
+  static char phase_offset = 0;
 
-  for (char phase = 0; phase < 4; phase++) {
+  phase_offset = (phase_offset + 1) % 4;
+
+  for (char phase_base = 0; phase_base < 4; phase_base++) {
+    char phase = (phase_base + phase_offset) % 4;
     // printf("\n ---------------------------------\nPhase %d\n", phase);
     for (int chunk_y = (phase / 2) % 2; chunk_y < SIM_CHUNK_HEIGHT;
          chunk_y += 2) {
@@ -781,8 +854,8 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
   //   }
   // }
 
-  timer_stop(update_loop);
-  timer_start(mouse_action);
+  // timer_stop(update_loop);
+  // timer_start(mouse_action);
 
   double xpos, ypos;
   char sand_click = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
@@ -820,15 +893,19 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
             continue;
           }
 
-          Quad *q = cell_get(p_obj, x, y);
-          set_type_and_dirty(p_obj, x, y, q, type);
+          if (rand() % 10 == 0) {
+            int chunk_id = chunk_get_id(x, y);
+            Chunk *chunk = chunk_get_from_id(p_obj, chunk_id);
+            Quad *q = cell_get_from_chunk(p_obj, chunk, x, y);
+            set_type_and_dirty_from_chunk(p_obj, chunk, x, y, q, type);
+          }
         }
       }
     }
   }
 
-  timer_stop(mouse_action);
-  timer_start(data_flushing);
+  // timer_stop(mouse_action);
+  // timer_start(data_flushing);
 
   for (unsigned int chunk_id_y = 0; chunk_id_y < SIM_CHUNK_HEIGHT;
        chunk_id_y++) {
@@ -867,12 +944,12 @@ static void on_update(void *obj, float delta_time, GLFWwindow *window) {
     vertex_buffer_flush(p_obj->vb_chunks_dirty_rect);
   }
 
-  timer_stop(data_flushing);
-  timer_stop(total);
-
-  printf("Total: %lf, update: %lf, mouse: %lf, data: %lf\n",
-         timer_elapsed(total), timer_elapsed(update_loop),
-         timer_elapsed(mouse_action), timer_elapsed(data_flushing));
+  // timer_stop(data_flushing);
+  // timer_stop(total);
+  //
+  // printf("Total: %lf, update: %lf, mouse: %lf, data: %lf\n",
+  //        timer_elapsed(total), timer_elapsed(update_loop),
+  //        timer_elapsed(mouse_action), timer_elapsed(data_flushing));
 
   // for (int i = 0; i < total; i++) {
   //   int x = i % SIM_WIDTH;
@@ -1053,6 +1130,8 @@ static void on_free(void *scene) {
 
 Scene *scene_pixel_sim_init() {
   Scene *scene = malloc(sizeof(Scene));
+
+  srand(time(NULL));
 
   scene->on_update = &on_update;
   scene->on_render = &on_render;
