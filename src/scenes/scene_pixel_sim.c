@@ -176,6 +176,160 @@ static void set_type_and_dirty_from_chunk(PixelSimObj *obj, Chunk *chunk, int x,
 }
 
 // Returns 0 when no changes, returns 1 when something has changed
+static unsigned char update_sim_water(PixelSimObj *obj, int chunk_id_q1,
+                                      Chunk *chunk_q1, int x, int y, Quad *q1) {
+  unsigned char changed = 0;
+
+  // Check under
+  int chunk_id_q2 = chunk_get_id(x, y - 1);
+  Chunk *chunk_q2;
+  if (chunk_id_q1 == chunk_id_q2) {
+    chunk_q2 = chunk_q1;
+  } else {
+    chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+  }
+
+  Quad *q2 = cell_get_from_chunk(obj, chunk_q2, x, y - 1);
+
+  switch (get_type(x, y - 1, q2)) {
+  case TYPE_OUTOFBOUNDS:
+  case TYPE_COUNT:
+    break;
+  case TYPE_AIR:
+    set_type(x, y, q1, TYPE_AIR);
+    set_type_and_dirty_from_chunk(obj, chunk_q2, x, y - 1, q2, TYPE_WATER);
+    changed = 1;
+    break;
+  case TYPE_WATER:
+  case TYPE_SAND:
+    // Check down left
+    chunk_id_q2 = chunk_get_id(x - 1, y - 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      chunk_q2 = chunk_q1;
+    } else {
+      chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+    }
+    q2 = cell_get_from_chunk(obj, chunk_q2, x - 1, y - 1);
+    switch (get_type(x - 1, y - 1, q2)) {
+    case TYPE_OUTOFBOUNDS:
+    case TYPE_COUNT:
+      break;
+    case TYPE_AIR:
+      set_type(x, y, q1, TYPE_AIR);
+      set_type_and_dirty_from_chunk(obj, chunk_q2, x - 1, y - 1, q2,
+                                    TYPE_WATER);
+      changed = 1;
+      break;
+    case TYPE_WATER:
+    case TYPE_SAND:
+      // Check down right
+      chunk_id_q2 = chunk_get_id(x + 1, y - 1);
+      if (chunk_id_q1 == chunk_id_q2) {
+        chunk_q2 = chunk_q1;
+      } else {
+        chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+      }
+      q2 = cell_get_from_chunk(obj, chunk_q2, x + 1, y - 1);
+      switch (get_type(x + 1, y - 1, q2)) {
+      case TYPE_OUTOFBOUNDS:
+      case TYPE_COUNT:
+        break;
+      case TYPE_AIR:
+        set_type(x, y, q1, TYPE_AIR);
+        set_type_and_dirty_from_chunk(obj, chunk_q2, x + 1, y - 1, q2,
+                                      TYPE_WATER);
+        changed = 1;
+        break;
+      case TYPE_WATER:
+      case TYPE_SAND:
+        // Check left
+        chunk_id_q2 = chunk_get_id(x - 1, y);
+        if (chunk_id_q1 == chunk_id_q2) {
+          chunk_q2 = chunk_q1;
+        } else {
+          chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+        }
+        q2 = cell_get_from_chunk(obj, chunk_q2, x - 1, y);
+        switch (get_type(x - 1, y, q2)) {
+        case TYPE_OUTOFBOUNDS:
+        case TYPE_COUNT:
+          break;
+        case TYPE_AIR:
+          set_type(x, y, q1, TYPE_AIR);
+          set_type_and_dirty_from_chunk(obj, chunk_q2, x - 1, y, q2,
+                                        TYPE_WATER);
+          changed = 1;
+          break;
+        case TYPE_WATER:
+        case TYPE_SAND:
+          // Check right
+          chunk_id_q2 = chunk_get_id(x + 1, y);
+          if (chunk_id_q1 == chunk_id_q2) {
+            chunk_q2 = chunk_q1;
+          } else {
+            chunk_q2 = chunk_get_from_id(obj, chunk_id_q2);
+          }
+          q2 = cell_get_from_chunk(obj, chunk_q2, x + 1, y);
+          switch (get_type(x + 1, y, q2)) {
+          case TYPE_OUTOFBOUNDS:
+          case TYPE_COUNT:
+            break;
+          case TYPE_AIR:
+            set_type(x, y, q1, TYPE_AIR);
+            set_type_and_dirty_from_chunk(obj, chunk_q2, x + 1, y, q2,
+                                          TYPE_WATER);
+            changed = 1;
+            break;
+          case TYPE_WATER:
+          case TYPE_SAND:
+            break;
+          }
+          break;
+        }
+        break;
+      }
+      break;
+    }
+    break;
+  }
+
+  if (changed) {
+    int chunk_id_q2 = chunk_get_id(x - 1, y - 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x - 1, y - 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x - 1,
+                                y - 1);
+    }
+
+    chunk_id_q2 = chunk_get_id(x - 1, y + 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x - 1, y + 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x - 1,
+                                y + 1);
+    }
+
+    chunk_id_q2 = chunk_get_id(x + 1, y + 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x + 1, y + 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x + 1,
+                                y + 1);
+    }
+
+    chunk_id_q2 = chunk_get_id(x + 1, y - 1);
+    if (chunk_id_q1 == chunk_id_q2) {
+      set_dirty_from_chunk_safe(obj, chunk_q1, x + 1, y - 1);
+    } else {
+      set_dirty_from_chunk_safe(obj, chunk_get_from_id(obj, chunk_id_q2), x + 1,
+                                y - 1);
+    }
+  }
+  return changed;
+}
+
+// Returns 0 when no changes, returns 1 when something has changed
 static unsigned char update_sim_sand(PixelSimObj *obj, int chunk_id_q1,
                                      Chunk *chunk_q1, int x, int y, Quad *q1) {
   unsigned char changed = 0;
@@ -311,6 +465,7 @@ static unsigned char update_sim(PixelSimObj *obj, int x, int y) {
   case TYPE_AIR:
     break;
   case TYPE_WATER:
+    changed = update_sim_water(obj, chunk_id, chunk, x, y, q);
     break;
   case TYPE_SAND:
     changed = update_sim_sand(obj, chunk_id, chunk, x, y, q);
